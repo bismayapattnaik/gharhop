@@ -194,7 +194,7 @@ export default function SwipeDeck({ items, destination }: { items: FeedItem[]; d
           </div>
 
           {/* Facts panel */}
-          <div className="flex-1 space-y-2.5 overflow-y-auto px-4 pb-4 pt-2">
+          <div className="no-scrollbar flex-1 space-y-2.5 overflow-y-auto px-4 pb-4 pt-2">
             <div className="grid grid-cols-2 gap-3 text-sm">
               <Fact label="Monthly total" value={formatInr(top.rentAmount)} />
               <Fact label="Deposit" value={formatInr(top.depositAmount)} />

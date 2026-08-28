@@ -12,7 +12,7 @@ export default function FilterBar({
   budget: string;
 }) {
   return (
-    <form method="get" className="flex flex-wrap items-end gap-2 overflow-x-auto rounded-xl border border-neutral-800 bg-neutral-900 p-2.5">
+    <form method="get" className="no-scrollbar flex flex-wrap items-end gap-2 overflow-x-auto rounded-xl border border-neutral-800 bg-neutral-900 p-2.5">
       <div>
         <label className="block text-xs font-medium text-neutral-500">Near</label>
         <select name="destination" defaultValue={destination} className="mt-1 rounded-lg border border-neutral-700 bg-neutral-800 px-2 py-1.5 text-sm text-neutral-100">

@@ -11,7 +11,7 @@ export default function SeekerLayout({ children }: { children: React.ReactNode }
         <div className="pointer-events-none absolute inset-x-0 top-0 z-30 hidden h-6 items-center justify-center lg:flex">
           <div className="h-5 w-28 rounded-b-2xl bg-neutral-900" />
         </div>
-        <div className="flex-1 overflow-y-auto pb-24">{children}</div>
+        <div className="no-scrollbar flex-1 overflow-y-auto pb-24">{children}</div>
         <BottomTabBar />
       </div>
     </div>
