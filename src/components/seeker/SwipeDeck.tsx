@@ -158,15 +158,16 @@ export default function SwipeDeck({ items, destination }: { items: FeedItem[]; d
               NOPE
             </div>
 
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent p-4 pt-16">
-              <p className="text-xl font-bold text-white">{top.property.title}</p>
-              <p className="text-sm text-white/70">
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent px-4 pt-14 pb-10">
+              <p className="truncate text-xl font-bold text-white">{top.property.title}</p>
+              <p className="truncate text-sm text-white/70">
                 {top.property.area} · {TYPE_LABEL[top.type]}
               </p>
             </div>
           </div>
 
-          {/* Floating action cluster — straddles the photo/panel seam */}
+          {/* Floating action cluster — straddles the photo/panel seam. Kept
+              clear of the title/area text above via the overlay's pb-10. */}
           <div className="relative z-10 -mt-7 flex items-center justify-center gap-5">
             <button
               aria-label="Pass"

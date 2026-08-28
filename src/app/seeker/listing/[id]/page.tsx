@@ -41,7 +41,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="pb-2">
       {/* Photo header, floating back button */}
-      <div className="relative h-64 w-full" style={{ background: gradientFor(item.id) }}>
+      <div className="relative h-64 w-full overflow-hidden" style={{ background: gradientFor(item.id) }}>
         <span className="pointer-events-none absolute -bottom-8 -right-4 text-[9rem] leading-none opacity-20">
           {TYPE_EMOJI[item.type]}
         </span>
@@ -56,8 +56,8 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           <Badge tone="dark" status={status} label={status === "ACTIVE" ? freshnessAgeLabel(item.lastConfirmedAt) : undefined} />
         </div>
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent p-4 pt-12">
-          <h1 className="text-2xl font-bold text-white">{item.property.title}</h1>
-          <p className="text-sm text-white/70">
+          <h1 className="truncate text-2xl font-bold text-white">{item.property.title}</h1>
+          <p className="truncate text-sm text-white/70">
             {item.property.area} · {TYPE_LABEL[item.type]} · {item.configuration}
           </p>
         </div>
