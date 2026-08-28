@@ -1,0 +1,210 @@
+// GharHop prototype data model
+// Simplified from the full PRD canonical model, but keeps the load-bearing
+// mechanics: freshness TTL, atomic slot holds, visit state machine, outcomes.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Local SQLite file for the prototype — no server/credentials to configure.
+// Swap to PostgreSQL/PostGIS per the technical blueprint when moving past the prototype.
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+enum Role {
+  SEEKER
+  OWNER
+  ADMIN
+}
+
+enum InventoryType {
+  FLAT
+  ROOM
+  PG_BED
+}
+
+enum ListingStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  RENTED
+}
+
+enum SlotStatus {
+  OPEN
+  HELD
+  BOOKED
+  BLOCKED
+  CANCELLED
+}
+
+enum HoldStatus {
+  ACTIVE
+  CONSUMED
+  EXPIRED
+  RELEASED
+}
+
+enum InterestAction {
+  SHORTLIST
+  PASS
+}
+
+enum VisitStatus {
+  REQUESTED
+  CONFIRMED
+  CHECKED_IN
+  COMPLETED
+  CANCELLED_BY_SEEKER
+  CANCELLED_BY_HOST
+  NO_SHOW_SEEKER
+  NO_SHOW_HOST
+  EXPIRED
+}
+
+enum BookingMode {
+  INSTANT
+  APPROVAL
+}
+
+enum VisitOutcome {
+  PASS
+  MAYBE
+  SHORTLIST
+  OFFER
+  COULD_NOT_VISIT
+}
+
+enum ReportStatus {
+  OPEN
+  TRIAGED
+  ACTIONED
+  NO_VIOLATION
+  CLOSED
+}
+
+model User {
+  id               String   @id @default(cuid())
+  phone            String   @unique
+  name             String
+  role             Role
+  reliabilityScore Int      @default(100)
+  createdAt        DateTime @default(now())
+
+  properties     Property[]      @relation("OwnerProperties")
+  interests      Interest[]
+  visitsAsSeeker Visit[]         @relation("SeekerVisits")
+  reportsFiled   TrustReport[]   @relation("Reporter")
+}
+
+model Property {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User     @relation("OwnerProperties", fields: [ownerId], references: [id])
+  title     String
+  area      String
+  address   String
+  lat       Float
+  lng       Float
+  createdAt DateTime @default(now())
+
+  items InventoryItem[]
+}
+
+model InventoryItem {
+  id                String        @id @default(cuid())
+  propertyId        String
+  property          Property      @relation(fields: [propertyId], references: [id])
+  type              InventoryType
+  configuration     String
+  rentAmount        Int
+  depositAmount     Int
+  furnishing        String
+  occupancyPolicy   String?
+  availableFrom     DateTime
+  status            ListingStatus @default(DRAFT)
+  bookingMode       BookingMode   @default(INSTANT)
+  lastConfirmedAt   DateTime      @default(now())
+  freshnessTtlHours Int           @default(72)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  slots     AvailabilitySlot[]
+  interests Interest[]
+  visits    Visit[]
+}
+
+model AvailabilitySlot {
+  id              String        @id @default(cuid())
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  startTime       DateTime
+  endTime         DateTime
+  capacity        Int           @default(1)
+  bookedCount     Int           @default(0)
+  status          SlotStatus    @default(OPEN)
+  createdAt       DateTime      @default(now())
+
+  holds SlotHold[]
+  visit Visit?
+}
+
+model SlotHold {
+  id             String     @id @default(cuid())
+  slotId         String
+  slot           AvailabilitySlot @relation(fields: [slotId], references: [id])
+  seekerId       String
+  idempotencyKey String     @unique
+  expiresAt      DateTime
+  status         HoldStatus @default(ACTIVE)
+  createdAt      DateTime   @default(now())
+}
+
+model Interest {
+  id              String         @id @default(cuid())
+  seekerId        String
+  seeker          User           @relation(fields: [seekerId], references: [id])
+  inventoryItemId String
+  inventoryItem   InventoryItem  @relation(fields: [inventoryItemId], references: [id])
+  action          InterestAction
+  moveInDate      DateTime?
+  budgetMax       Int?
+  createdAt       DateTime       @default(now())
+
+  @@unique([seekerId, inventoryItemId])
+}
+
+model Visit {
+  id              String        @id @default(cuid())
+  slotId          String        @unique
+  slot            AvailabilitySlot @relation(fields: [slotId], references: [id])
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  seekerId        String
+  seeker          User          @relation("SeekerVisits", fields: [seekerId], references: [id])
+  status          VisitStatus   @default(REQUESTED)
+  bookingMode     BookingMode   @default(INSTANT)
+  scheduledStart  DateTime
+  scheduledEnd    DateTime
+  checkedInAt     DateTime?
+  completedAt     DateTime?
+  cancelReason    String?
+  outcome         VisitOutcome?
+  outcomeNote     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model TrustReport {
+  id         String       @id @default(cuid())
+  category   String
+  targetType String
+  targetId   String
+  reporterId String?
+  reporter   User?        @relation("Reporter", fields: [reporterId], references: [id])
+  details    String?
+  status     ReportStatus @default(OPEN)
+  createdAt  DateTime     @default(now())
+}

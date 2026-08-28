@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GharHop — prototype
 
-## Getting Started
+A working prototype of the "Availability OS" concept from the GharHop PRD: a
+visit-liquidity marketplace, not another listings feed. This is intentionally
+scoped down from the full product spec — see **Scope** below — to prove the
+hard mechanics (freshness enforcement, atomic scheduling, no double-booking,
+visit lifecycle, reliability signals) end to end before investing in mobile
+apps, payments, KYC, and trust tooling.
 
-First, run the development server:
+## Run it
 
-```bash
+```
+npm install
+npx prisma generate
+npx prisma db push
+node prisma/seed.mjs   # demo owners, properties, slots
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Demo accounts (mock OTP — any phone "logs in", no SMS is sent)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Role   | Phone        | Notes |
+|--------|--------------|-------|
+| Owner  | 9800000001   | Priya, PG operator — Bellandur. Has one intentionally stale bed to demo freshness enforcement. |
+| Owner  | 9800000002   | Mr. Rao — HSR Layout flat (approval-required booking) + Sarjapur room (instant booking). |
+| Admin  | 0000000000   | Ops console. |
+| Seeker | *any number* | First login with a new number creates the account. |
 
-## Learn More
+## What's actually implemented (the hard part)
 
-To learn more about Next.js, take a look at the following resources:
+- **Freshness TTL** — a listing's `ACTIVE`/`STALE` state is *derived* at read
+  time from `lastConfirmedAt`, not stored — so a missed reconfirmation always
+  shows correctly, and stale units automatically disappear from seeker
+  discovery (`src/lib/freshness.ts`).
+- **Atomic slot holds, no double-booking** — every hold/confirm/cancel goes
+  through a Prisma transaction that re-checks slot state before committing,
+  with idempotency keys so a retried request never creates a duplicate
+  booking (`src/lib/scheduling.ts`). Verified live: two seekers racing for the
+  same slot — the second gets a 409, not a double booking.
+- **Instant vs. approval booking modes** — per listing, matching PRD GH-504.
+- **Visit state machine** — REQUESTED → CONFIRMED → CHECKED_IN → COMPLETED,
+  plus cancellation/no-show branches that release capacity and adjust the
+  seeker's reliability score.
+- **Owner tools** — one-tap reconfirm, per-listing booking mode, request
+  inbox, performance dashboard against the PRD's own decision-gate
+  thresholds (≥60% visit completion, ≥15% serious next-step rate).
+- **Ops console** — stale queue, visit timeline, trust report intake/action.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scope cuts from the full PRD (deliberate, for a first prototype)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Auth**: mock OTP (any phone number), no real SMS/DLT provider.
+- **Database**: SQLite file (`prisma/dev.db`), not PostgreSQL/PostGIS. Swap
+  the Prisma datasource + `haversineKm` geo helper for real geo queries when
+  moving off the prototype.
+- **No mobile app** — this is a responsive web app covering both the seeker
+  and owner experience, not the Flutter app from the technical blueprint.
+- **No payments, escrow, KYC/identity verification, masked calling, or
+  Hop Tour routing** — all P1/P2 in the PRD, and all require third-party
+  provider contracts that don't make sense to wire up before the core loop
+  is validated.
+- **No background jobs** — slot-hold expiry is checked lazily on read
+  (`releaseIfExpired` in `scheduling.ts`) rather than via a cron worker.
+  Fine for a prototype; replace with a real queue before production.
 
-## Deploy on Vercel
+## Environment notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This was built on a machine with no admin rights and a corporate TLS-inspecting
+proxy. Node.js and the Prisma engine binaries were installed via portable/
+user-scope installs rather than machine-wide MSIs — see the parent
+`tools/` directory (outside this repo) for the portable Node install and the
+exported CA bundle needed for `npm`/`node` to trust the proxy
+(`NODE_EXTRA_CA_CERTS`). If you're on a normal machine, ignore this — plain
+`npm install` will work.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Also: `prisma`/`@prisma/client` are pinned to `6.19.3`. Prisma 7 changed the
+schema format significantly (no more `url` in `datasource`, driver adapters
+required instead) — worth revisiting once that's stable, but not worth
+building against a release candidate for a prototype.
+
+## Next steps (in priority order)
+
+1. Run the four-week concierge validation from PRD section 12 using this as
+   the actual booking tool instead of spreadsheets.
+2. Add the freshness/slot-coverage/completion metrics from the pilot
+   scorecard as a real dashboard (the owner performance page already tracks
+   the same definitions — extend it marketplace-wide).
+3. Replace mock auth with real OTP once there's a demand-side pilot cohort.
+4. Only then: mobile app, payments, KYC, Hop Tour.

@@ -36,6 +36,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local sqlite database (prototype only — recreate with `npx prisma db push` + seed)
+/prisma/dev.db
+/prisma/dev.db-journal
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
