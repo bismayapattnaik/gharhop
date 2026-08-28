@@ -17,8 +17,8 @@ export default async function SeekerVisitsPage() {
   });
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <h1 className="mb-4 text-2xl font-bold text-slate-900">My Visits</h1>
+    <div className="mx-auto max-w-2xl px-4 py-4">
+      <h1 className="mb-4 text-xl font-bold text-slate-900">My Visits</h1>
       {visits.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
           No visits yet. Head to Discover and shortlist a place to book your first visit.

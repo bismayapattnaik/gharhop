@@ -26,15 +26,19 @@ export default async function TopNav() {
           <span className="hidden text-xs text-slate-400 sm:inline">Swipe nearby. Match a visit. Move in.</span>
         </Link>
         <nav className="flex items-center gap-4 text-sm font-medium text-slate-600">
-          {user &&
-            LINKS[user.role]?.map((link) => (
-              <Link key={link.href} href={link.href} className="hover:text-teal-700">
-                {link.label}
-              </Link>
-            ))}
+          {user && (
+            // Seekers get a bottom tab bar on mobile instead — avoid double nav.
+            <span className={user.role === "SEEKER" ? "hidden items-center gap-4 sm:flex" : "flex items-center gap-4"}>
+              {LINKS[user.role]?.map((link) => (
+                <Link key={link.href} href={link.href} className="hover:text-teal-700">
+                  {link.label}
+                </Link>
+              ))}
+            </span>
+          )}
           {user ? (
             <div className="flex items-center gap-3 border-l border-slate-200 pl-4">
-              <span className="text-slate-500">
+              <span className="hidden text-slate-500 sm:inline">
                 {user.name} <span className="text-xs uppercase text-slate-400">· {user.role}</span>
               </span>
               <LogoutButton />

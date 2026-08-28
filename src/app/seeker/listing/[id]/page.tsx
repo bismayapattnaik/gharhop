@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
@@ -30,8 +31,11 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const status = derivedStatus(item);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="rounded-2xl border border-slate-200 bg-white p-6">
+    <div className="mx-auto max-w-2xl space-y-4 px-4 py-4">
+      <Link href="/seeker" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-teal-700">
+        ← Back to Discover
+      </Link>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">{item.property.title}</h1>
@@ -61,7 +65,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5">
         <h2 className="text-lg font-semibold text-slate-900">Book a visit</h2>
         <p className="mt-1 text-sm text-slate-500">
           Pick an open slot below. It&apos;s a real hold on the owner&apos;s calendar — not a wish list.

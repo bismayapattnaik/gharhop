@@ -56,9 +56,13 @@ export default async function SeekerFeedPage({
     .sort((a, b) => a.distanceKm - b.distanceKm);
 
   return (
-    <div className="mx-auto max-w-md">
-      <h1 className="mb-4 text-2xl font-bold text-slate-900">Discover</h1>
-      <FilterBar destination={destination.name} type={sp.type ?? "ALL"} budget={sp.budget ?? ""} />
+    <div>
+      <div className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50/95 px-4 pb-3 pt-4 backdrop-blur">
+        <h1 className="text-xl font-bold text-slate-900">Discover</h1>
+        <div className="mt-3">
+          <FilterBar destination={destination.name} type={sp.type ?? "ALL"} budget={sp.budget ?? ""} />
+        </div>
+      </div>
       <SwipeDeck items={feed} destination={destination.name} />
     </div>
   );
