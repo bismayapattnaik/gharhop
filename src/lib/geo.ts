@@ -1,6 +1,6 @@
 // Straight-line distance only (PRD GH-205: "failures degrade to distance, not
 // blank screen"). No real geocoding/ETA provider wired up in the prototype —
-// owners enter lat/lng for a fixed set of Bengaluru micro-markets.
+// owners enter lat/lng for a fixed set of Gurgaon (Gurugram) micro-markets.
 
 const EARTH_RADIUS_KM = 6371;
 
@@ -23,11 +23,12 @@ export function haversineKm(
   return EARTH_RADIUS_KM * c;
 }
 
-// Bengaluru micro-markets from the launch corridor (PRD section 13).
+// Gurgaon (Gurugram) launch corridor — controlled single-locality beta per
+// the 48-hour launch plan ("do not launch across multiple cities").
 export const MICRO_MARKETS = [
-  { name: "Bellandur", lat: 12.9257, lng: 77.6764 },
-  { name: "HSR Layout", lat: 12.9116, lng: 77.6389 },
-  { name: "Sarjapur Road", lat: 12.9008, lng: 77.6858 },
-  { name: "Marathahalli", lat: 12.9569, lng: 77.6974 },
-  { name: "Whitefield", lat: 12.9698, lng: 77.7499 },
+  { name: "DLF Cyber City", lat: 28.495, lng: 77.089 },
+  { name: "Golf Course Road", lat: 28.438, lng: 77.1025 },
+  { name: "Sohna Road", lat: 28.4088, lng: 77.0367 },
+  { name: "Sector 29", lat: 28.4646, lng: 77.0669 },
+  { name: "Udyog Vihar", lat: 28.501, lng: 77.089 },
 ] as const;

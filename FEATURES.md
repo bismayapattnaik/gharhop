@@ -113,12 +113,18 @@ no "call to check if anyone's free." Owners choose, per listing:
 - **Instant confirm** — any request in an open slot is automatically a
   booked visit
 - **Requires approval** — owner sees the request and accepts or declines
+- **Counter-proposal** — if neither the requested nor any other obvious time
+  works, the owner can propose a different one of their own open slots
+  instead of just declining. The seeker then accepts or declines *that* —
+  nobody's visit silently disappears just because the original time didn't work.
 
 ### 4.4 Request inbox
 Every pending "requires approval" request lands here, with the seeker's
-name and requested time. Accept or decline in one tap. The PRD's own target
-is a **median response time under 30 minutes** — this inbox exists to make
-that achievable.
+name and requested time. Accept, decline, or **propose a different time**
+in one tap. The PRD's own target is a **median response time under 30
+minutes** — this inbox exists to make that achievable. (While a
+counter-proposal is pending, it moves out of this inbox — the owner is now
+the one waiting on the seeker, not the other way around.)
 
 ### 4.5 Performance dashboard
 Owners see, for their own listings: active vs. stale count, shortlists
@@ -135,14 +141,24 @@ A single screen for the trust & operations side of the business:
 
 - **Stale queue** — every listing currently past its freshness window,
   with the owner's contact info, so ops can chase it down manually if a
-  listing matters enough
+  listing matters enough. **Pause or mark-rented right from this screen** —
+  no need to log in as the owner.
+- **All listings** — the same pause/reactivate/mark-rented controls across
+  every listing in the marketplace, not just the stale ones — for handling
+  a fraud report or an owner request over the phone.
 - **Visit operations timeline** — a live feed of every visit and its status
-  across the whole marketplace
+  across the whole marketplace, with **force-confirm** (when an owner has
+  gone unresponsive past their SLA and support needs to unblock the seeker)
+  and **cancel** as direct overrides.
 - **Trust cases** — open fraud/safety reports, with one-tap "action" or
   "no violation" resolution
 - **Marketplace health numbers** — active/stale counts, visit completion
   rate — checked against the same thresholds the business plan uses to
   decide whether to expand to a new city
+
+This is deliberately the "minimum admin dashboard" from the launch plan:
+support can unstick almost any broken booking without touching the
+database directly.
 
 ---
 
@@ -166,6 +182,12 @@ from silently breaking in ways that would destroy trust:
   internal reliability score drop. It's not shown as a public shaming
   mechanic — it's a quiet signal the platform can use later (e.g., to
   prioritize responses to more reliable seekers).
+- **In-app notifications.** Every state change that leaves someone waiting
+  (a new request, a confirmation, a decline, a cancellation, a proposed
+  reschedule) creates a notification for the other party — a bell icon with
+  an unread count, not a hope that someone happens to refresh the page.
+  This covers *event-triggered* notices only; there's no background worker
+  yet for *time-based* ones like "your visit is in one hour."
 
 ---
 
@@ -180,6 +202,7 @@ just sequenced after the core loop above is proven to work:
 | Payments, deposits, escrow | Legally needs a regulated payment partner; the product explicitly should never custody money itself |
 | Identity/KYC verification | Needs a verification provider contract + legal review |
 | Masked calling | Needs a telephony provider |
+| Time-based reminders ("visit in 1 hour") | Needs a background job scheduler; the notification center only fires on state changes today, not on a clock |
 | "Hop Tour" (bundling 2-4 confirmed visits into one efficient route) | A real differentiator, but only matters once there's enough density that seekers are booking multiple visits in one area |
 | Native mobile app | The current build is a responsive web app that behaves like a phone app (see below) — a real Flutter app is a much later investment |
 | Real property photos | No media upload pipeline yet — cards use color-graded placeholder art instead |

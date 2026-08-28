@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { derivedStatus, freshnessAgeLabel } from "@/lib/freshness";
 import Badge from "@/components/Badge";
 import ReportActionButtons from "@/components/admin/ReportActionButtons";
+import AdminItemActions from "@/components/admin/AdminItemActions";
+import AdminVisitActions from "@/components/admin/AdminVisitActions";
 import { formatDateTime, TYPE_LABEL } from "@/lib/format";
 
 export default async function AdminConsolePage() {
@@ -53,15 +55,33 @@ export default async function AdminConsolePage() {
         ) : (
           <div className="space-y-2">
             {stale.map((item) => (
-              <div key={item.id} className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm">
+              <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm">
                 <span>
                   {item.property.title} · {TYPE_LABEL[item.type]} · owner {item.property.owner.name} ({item.property.owner.phone})
+                  <span className="ml-2 text-red-700">{freshnessAgeLabel(item.lastConfirmedAt)}</span>
                 </span>
-                <span className="text-red-700">{freshnessAgeLabel(item.lastConfirmedAt)}</span>
+                <AdminItemActions itemId={item.id} status={item.status} />
               </div>
             ))}
           </div>
         )}
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-lg font-semibold text-slate-900">All listings</h2>
+        <div className="space-y-2">
+          {items.map((item) => (
+            <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm">
+              <span>
+                {item.property.title} · {TYPE_LABEL[item.type]} · {item.property.owner.name}
+              </span>
+              <div className="flex items-center gap-2">
+                <Badge status={derivedStatus(item)} />
+                <AdminItemActions itemId={item.id} status={item.status} />
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section>
@@ -71,8 +91,12 @@ export default async function AdminConsolePage() {
             <div key={visit.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm">
               <span>
                 {visit.seeker.name} → {visit.inventoryItem.property.title} · {formatDateTime(visit.scheduledStart)}
+                {visit.proposedByOwner && <span className="ml-2 text-xs text-amber-600">(owner proposed new time)</span>}
               </span>
-              <Badge status={visit.status} />
+              <div className="flex items-center gap-2">
+                <Badge status={visit.status} />
+                <AdminVisitActions visitId={visit.id} status={visit.status} />
+              </div>
             </div>
           ))}
         </div>

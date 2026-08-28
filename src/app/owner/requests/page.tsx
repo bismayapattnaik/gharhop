@@ -9,11 +9,27 @@ export default async function OwnerRequestsPage() {
   if (!user) redirect("/login?role=OWNER");
   if (user.role !== "OWNER") redirect("/");
 
+  // proposedByOwner=true means the owner is the one waiting on the seeker —
+  // nothing for the owner to action, so it's excluded from this inbox.
   const requests = await prisma.visit.findMany({
-    where: { status: "REQUESTED", inventoryItem: { property: { ownerId: user.id } } },
+    where: { status: "REQUESTED", proposedByOwner: false, inventoryItem: { property: { ownerId: user.id } } },
     include: { seeker: true, inventoryItem: { include: { property: true } } },
     orderBy: { createdAt: "asc" },
   });
+
+  const itemIds = [...new Set(requests.map((v) => v.inventoryItemId))];
+  const openSlots = itemIds.length
+    ? await prisma.availabilitySlot.findMany({
+        where: { inventoryItemId: { in: itemIds }, status: "OPEN" },
+        orderBy: { startTime: "asc" },
+      })
+    : [];
+  const slotsByItem = new Map<string, { id: string; startTime: string }[]>();
+  for (const s of openSlots) {
+    const arr = slotsByItem.get(s.inventoryItemId) ?? [];
+    arr.push({ id: s.id, startTime: s.startTime.toISOString() });
+    slotsByItem.set(s.inventoryItemId, arr);
+  }
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -37,7 +53,7 @@ export default async function OwnerRequestsPage() {
               <p className="text-sm text-slate-700">{formatDateTime(visit.scheduledStart)}</p>
               <p className="text-xs text-slate-400">Requested {formatDateTime(visit.createdAt)}</p>
             </div>
-            <RespondButtons visitId={visit.id} />
+            <RespondButtons visitId={visit.id} alternateSlots={slotsByItem.get(visit.inventoryItemId) ?? []} />
           </div>
         ))}
       </div>

@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
+import { notify } from "@/lib/notifications";
+import { formatDateTime } from "@/lib/format";
 import type { VisitOutcome } from "@prisma/client";
 
 // The load-bearing mechanic from PRD section 7.E ("Slot matching algorithm")
@@ -65,10 +67,10 @@ export async function confirmVisitFromHold(params: { holdId: string; seekerId: s
     where: { seekerId: params.seekerId, slot: { holds: { some: { id: params.holdId } } } },
   });
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const hold = await tx.slotHold.findUnique({ where: { id: params.holdId } });
     if (!hold || hold.seekerId !== params.seekerId) throw new NotFoundError("Hold not found");
-    if (hold.status === "CONSUMED" && existingVisit) return existingVisit; // idempotent replay
+    if (hold.status === "CONSUMED" && existingVisit) return { visit: existingVisit, replay: true as const };
     if (hold.status !== "ACTIVE") throw new ConflictError("This hold has expired — request a new visit slot.");
     if (hold.expiresAt.getTime() < Date.now()) {
       await tx.slotHold.update({ where: { id: hold.id }, data: { status: "EXPIRED" } });
@@ -78,7 +80,7 @@ export async function confirmVisitFromHold(params: { holdId: string; seekerId: s
 
     const slot = await tx.availabilitySlot.findUnique({ where: { id: hold.slotId } });
     if (!slot) throw new NotFoundError("Slot not found");
-    const item = await tx.inventoryItem.findUnique({ where: { id: slot.inventoryItemId } });
+    const item = await tx.inventoryItem.findUnique({ where: { id: slot.inventoryItemId }, include: { property: true } });
     if (!item) throw new NotFoundError("Listing not found");
 
     const instant = item.bookingMode === "INSTANT";
@@ -101,31 +103,51 @@ export async function confirmVisitFromHold(params: { holdId: string; seekerId: s
       data: instant ? { status: "BOOKED", bookedCount: { increment: 1 } } : { status: "HELD" },
     });
 
-    return visit;
+    return { visit, replay: false as const, instant, ownerId: item.property.ownerId, propertyTitle: item.property.title };
   });
+
+  if (!result.replay) {
+    const when = formatDateTime(result.visit.scheduledStart);
+    if (result.instant) {
+      await notify(result.visit.seekerId, "VISIT_CONFIRMED", `Your visit to ${result.propertyTitle} on ${when} is confirmed.`, "/seeker/visits");
+      await notify(result.ownerId!, "VISIT_CONFIRMED", `New confirmed visit for ${result.propertyTitle} on ${when}.`, "/owner/requests");
+    } else {
+      await notify(result.ownerId!, "VISIT_REQUESTED", `New visit request for ${result.propertyTitle} on ${when}.`, "/owner/requests");
+    }
+  }
+
+  return result.visit;
 }
 
-export async function ownerRespond(params: { visitId: string; ownerId: string; action: "accept" | "reject" }) {
-  return prisma.$transaction(async (tx) => {
+export async function ownerRespond(params: { visitId: string; actorId: string; action: "accept" | "reject"; adminOverride?: boolean }) {
+  const result = await prisma.$transaction(async (tx) => {
     const visit = await tx.visit.findUnique({ where: { id: params.visitId }, include: { slot: true, inventoryItem: { include: { property: true } } } });
     if (!visit) throw new NotFoundError("Visit not found");
-    if (visit.inventoryItem.property.ownerId !== params.ownerId) throw new ForbiddenError("Not your listing");
+    if (!params.adminOverride && visit.inventoryItem.property.ownerId !== params.actorId) throw new ForbiddenError("Not your listing");
     if (visit.status !== "REQUESTED") throw new ConflictError("This request was already resolved.");
 
     if (params.action === "accept") {
-      await tx.visit.update({ where: { id: visit.id }, data: { status: "CONFIRMED" } });
+      await tx.visit.update({ where: { id: visit.id }, data: { status: "CONFIRMED", proposedByOwner: false } });
       await tx.availabilitySlot.update({ where: { id: visit.slotId }, data: { status: "BOOKED", bookedCount: { increment: 1 } } });
     } else {
       await tx.visit.update({ where: { id: visit.id }, data: { status: "CANCELLED_BY_HOST", cancelReason: "Owner declined the request" } });
       await tx.availabilitySlot.update({ where: { id: visit.slotId }, data: { status: "OPEN" } });
     }
-    return tx.visit.findUnique({ where: { id: visit.id } });
+    return { visit: await tx.visit.findUnique({ where: { id: visit.id } }), seekerId: visit.seekerId, propertyTitle: visit.inventoryItem.property.title };
   });
+
+  const when = formatDateTime(result.visit!.scheduledStart);
+  if (params.action === "accept") {
+    await notify(result.seekerId, "VISIT_CONFIRMED", `${result.propertyTitle} confirmed your visit for ${when}.`, "/seeker/visits");
+  } else {
+    await notify(result.seekerId, "VISIT_DECLINED", `${result.propertyTitle} declined your visit request for ${when}.`, "/seeker/visits");
+  }
+  return result.visit;
 }
 
 export async function cancelVisit(params: { visitId: string; actorRole: "seeker" | "host"; reason?: string }) {
-  return prisma.$transaction(async (tx) => {
-    const visit = await tx.visit.findUnique({ where: { id: params.visitId } });
+  const result = await prisma.$transaction(async (tx) => {
+    const visit = await tx.visit.findUnique({ where: { id: params.visitId }, include: { inventoryItem: { include: { property: true } } } });
     if (!visit) throw new NotFoundError("Visit not found");
     if (["COMPLETED", "CANCELLED_BY_SEEKER", "CANCELLED_BY_HOST", "EXPIRED"].includes(visit.status)) {
       throw new ConflictError("This visit can no longer be cancelled.");
@@ -146,8 +168,20 @@ export async function cancelVisit(params: { visitId: string; actorRole: "seeker"
     if (params.actorRole === "seeker") {
       await tx.user.update({ where: { id: visit.seekerId }, data: { reliabilityScore: { decrement: 5 } } });
     }
-    return tx.visit.findUnique({ where: { id: visit.id } });
+    return {
+      visit: await tx.visit.findUnique({ where: { id: visit.id } }),
+      seekerId: visit.seekerId,
+      ownerId: visit.inventoryItem.property.ownerId,
+      propertyTitle: visit.inventoryItem.property.title,
+    };
   });
+
+  const when = formatDateTime(result.visit!.scheduledStart);
+  const notifyTarget = params.actorRole === "seeker" ? result.ownerId : result.seekerId;
+  const cancelledBy = params.actorRole === "seeker" ? "The seeker" : "The owner";
+  await notify(notifyTarget, "VISIT_CANCELLED", `${cancelledBy} cancelled the visit for ${result.propertyTitle} on ${when}.`, params.actorRole === "seeker" ? "/owner/requests" : "/seeker/visits");
+
+  return result.visit;
 }
 
 export async function checkIn(visitId: string, seekerId: string) {
@@ -183,4 +217,95 @@ export async function markNoShow(visitId: string, who: "seeker" | "host") {
 
 export async function submitOutcome(visitId: string, outcome: VisitOutcome, note?: string) {
   return prisma.visit.update({ where: { id: visitId }, data: { outcome, outcomeNote: note } });
+}
+
+// --- Counter-proposal / reschedule (PRD "three booking modes": instant,
+// approval, and owner-proposed-alternate-time) ---
+
+/** Owner can't make the requested/confirmed time — proposes a different
+ * open slot on the same listing. The visit stays the same row (so history/
+ * audit trail is preserved) but now points at the new slot and flips back
+ * to REQUESTED, waiting on the *seeker* this time. */
+export async function proposeReschedule(params: { visitId: string; ownerId: string; newSlotId: string }) {
+  const result = await prisma.$transaction(async (tx) => {
+    const visit = await tx.visit.findUnique({
+      where: { id: params.visitId },
+      include: { inventoryItem: { include: { property: true } } },
+    });
+    if (!visit) throw new NotFoundError("Visit not found");
+    if (visit.inventoryItem.property.ownerId !== params.ownerId) throw new ForbiddenError("Not your listing");
+    if (!["REQUESTED", "CONFIRMED"].includes(visit.status)) {
+      throw new ConflictError("Only pending or confirmed visits can be rescheduled.");
+    }
+
+    const newSlot = await tx.availabilitySlot.findUnique({ where: { id: params.newSlotId } });
+    if (!newSlot || newSlot.inventoryItemId !== visit.inventoryItemId) throw new NotFoundError("Slot not found");
+    if (newSlot.status !== "OPEN" || newSlot.bookedCount >= newSlot.capacity) {
+      throw new ConflictError("That slot is no longer available.");
+    }
+
+    const wasBooked = visit.status === "CONFIRMED";
+    await tx.availabilitySlot.update({
+      where: { id: visit.slotId },
+      data: wasBooked ? { status: "OPEN", bookedCount: { decrement: 1 } } : { status: "OPEN" },
+    });
+    await tx.availabilitySlot.update({ where: { id: newSlot.id }, data: { status: "HELD" } });
+
+    const updated = await tx.visit.update({
+      where: { id: visit.id },
+      data: {
+        slotId: newSlot.id,
+        scheduledStart: newSlot.startTime,
+        scheduledEnd: newSlot.endTime,
+        status: "REQUESTED",
+        proposedByOwner: true,
+      },
+    });
+    return { visit: updated, seekerId: visit.seekerId, propertyTitle: visit.inventoryItem.property.title };
+  });
+
+  const when = formatDateTime(result.visit.scheduledStart);
+  await notify(result.seekerId, "VISIT_RESCHEDULE_PROPOSED", `${result.propertyTitle} proposed a new time: ${when}. Please accept or decline.`, "/seeker/visits");
+  return result.visit;
+}
+
+export async function acceptReschedule(params: { visitId: string; seekerId: string }) {
+  const result = await prisma.$transaction(async (tx) => {
+    const visit = await tx.visit.findUnique({ where: { id: params.visitId }, include: { inventoryItem: { include: { property: true } } } });
+    if (!visit) throw new NotFoundError("Visit not found");
+    if (visit.seekerId !== params.seekerId) throw new ForbiddenError("Not your visit");
+    if (visit.status !== "REQUESTED" || !visit.proposedByOwner) {
+      throw new ConflictError("There's no pending reschedule proposal on this visit.");
+    }
+    await tx.visit.update({ where: { id: visit.id }, data: { status: "CONFIRMED", proposedByOwner: false } });
+    await tx.availabilitySlot.update({ where: { id: visit.slotId }, data: { status: "BOOKED", bookedCount: { increment: 1 } } });
+    return { visit: await tx.visit.findUnique({ where: { id: visit.id } }), ownerId: visit.inventoryItem.property.ownerId, propertyTitle: visit.inventoryItem.property.title };
+  });
+
+  const when = formatDateTime(result.visit!.scheduledStart);
+  await notify(result.ownerId, "VISIT_RESCHEDULE_ACCEPTED", `The seeker accepted your proposed time for ${result.propertyTitle}: ${when}.`, "/owner/requests");
+  return result.visit;
+}
+
+// --- Admin overrides (minimum admin dashboard: pause/mark-rented on
+// listings and confirm/cancel on visits, per the launch plan) ---
+
+export async function adminConfirmVisit(visitId: string) {
+  const result = await prisma.$transaction(async (tx) => {
+    const visit = await tx.visit.findUnique({ where: { id: visitId }, include: { inventoryItem: { include: { property: true } } } });
+    if (!visit) throw new NotFoundError("Visit not found");
+    if (visit.status !== "REQUESTED") throw new ConflictError("Only pending requests can be force-confirmed.");
+    await tx.visit.update({ where: { id: visit.id }, data: { status: "CONFIRMED", proposedByOwner: false } });
+    await tx.availabilitySlot.update({ where: { id: visit.slotId }, data: { status: "BOOKED", bookedCount: { increment: 1 } } });
+    return {
+      visit: await tx.visit.findUnique({ where: { id: visit.id } }),
+      seekerId: visit.seekerId,
+      ownerId: visit.inventoryItem.property.ownerId,
+      propertyTitle: visit.inventoryItem.property.title,
+    };
+  });
+  const when = formatDateTime(result.visit!.scheduledStart);
+  await notify(result.seekerId, "VISIT_CONFIRMED", `${result.propertyTitle} visit for ${when} was confirmed by GharHop support.`, "/seeker/visits");
+  await notify(result.ownerId, "VISIT_CONFIRMED", `GharHop support confirmed a visit for ${result.propertyTitle} on ${when}.`, "/owner/requests");
+  return result.visit;
 }

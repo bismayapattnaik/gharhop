@@ -52,7 +52,15 @@ export default async function SeekerVisitsPage() {
               </div>
             </div>
             <div className="border-t border-neutral-800 p-3">
-              <VisitActions visit={{ id: visit.id, status: visit.status, outcome: visit.outcome }} />
+              <VisitActions
+                visit={{
+                  id: visit.id,
+                  status: visit.status,
+                  outcome: visit.outcome,
+                  proposedByOwner: visit.proposedByOwner,
+                  scheduledStart: visit.scheduledStart.toISOString(),
+                }}
+              />
             </div>
           </div>
         ))}

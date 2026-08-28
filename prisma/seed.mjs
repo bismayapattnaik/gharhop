@@ -28,14 +28,14 @@ async function main() {
   const priya = await prisma.user.create({ data: { phone: "9800000001", name: "Priya (PG operator)", role: "OWNER" } });
   const rao = await prisma.user.create({ data: { phone: "9800000002", name: "Mr. Rao", role: "OWNER" } });
 
-  const bellandurPg = await prisma.property.create({
+  const cyberCityPg = await prisma.property.create({
     data: {
       ownerId: priya.id,
-      title: "Priya's PG — Bellandur Block A",
-      area: "Bellandur",
-      address: "12th Cross, near Ecospace",
-      lat: 12.9257,
-      lng: 77.6764,
+      title: "Priya's PG — DLF Cyber City Block A",
+      area: "DLF Cyber City",
+      address: "Tower 4, near Two Horizon Center",
+      lat: 28.495,
+      lng: 77.089,
       items: {
         create: [
           {
@@ -69,14 +69,14 @@ async function main() {
     include: { items: true },
   });
 
-  const hsrFlat = await prisma.property.create({
+  const golfCourseFlat = await prisma.property.create({
     data: {
       ownerId: rao.id,
-      title: "Mr. Rao's 2BHK — HSR Layout",
-      area: "HSR Layout",
-      address: "27th Main, Sector 2",
-      lat: 12.9116,
-      lng: 77.6389,
+      title: "Mr. Rao's 2BHK — Golf Course Road",
+      area: "Golf Course Road",
+      address: "Near Nathupur village",
+      lat: 28.438,
+      lng: 77.1025,
       items: {
         create: [
           {
@@ -96,14 +96,14 @@ async function main() {
     include: { items: true },
   });
 
-  const sarjapurRoom = await prisma.property.create({
+  const sohnaRoadRoom = await prisma.property.create({
     data: {
       ownerId: rao.id,
-      title: "Independent room — Sarjapur Road",
-      area: "Sarjapur Road",
-      address: "Near Wipro corporate office",
-      lat: 12.9008,
-      lng: 77.6858,
+      title: "Independent room — Sohna Road",
+      area: "Sohna Road",
+      address: "Near Vatika business park",
+      lat: 28.4088,
+      lng: 77.0367,
       items: {
         create: [
           {
@@ -123,7 +123,7 @@ async function main() {
     include: { items: true },
   });
 
-  const bookableItems = [bellandurPg.items[0], hsrFlat.items[0], sarjapurRoom.items[0]];
+  const bookableItems = [cyberCityPg.items[0], golfCourseFlat.items[0], sohnaRoadRoom.items[0]];
   for (const item of bookableItems) {
     await prisma.availabilitySlot.createMany({
       data: [1, 2, 4].map((days) => ({

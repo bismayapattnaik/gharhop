@@ -27,6 +27,9 @@ export default async function ManageItemPage({ params }: { params: Promise<{ id:
   if (!item || item.property.ownerId !== user.id) notFound();
 
   const status = derivedStatus(item);
+  const openSlots = item.slots
+    .filter((s) => s.status === "OPEN")
+    .map((s) => ({ id: s.id, startTime: s.startTime.toISOString() }));
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -78,7 +81,12 @@ export default async function ManageItemPage({ params }: { params: Promise<{ id:
               </div>
               <div className="flex items-center gap-2">
                 <Badge status={visit.status} />
-                {visit.status === "REQUESTED" && <RespondButtons visitId={visit.id} />}
+                {visit.status === "REQUESTED" && !visit.proposedByOwner && (
+                  <RespondButtons visitId={visit.id} alternateSlots={openSlots} />
+                )}
+                {visit.status === "REQUESTED" && visit.proposedByOwner && (
+                  <span className="text-xs text-slate-400">Waiting on seeker to accept your proposed time</span>
+                )}
               </div>
             </div>
           ))}

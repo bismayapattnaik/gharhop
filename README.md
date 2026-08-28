@@ -7,6 +7,11 @@ hard mechanics (freshness enforcement, atomic scheduling, no double-booking,
 visit lifecycle, reliability signals) end to end before investing in mobile
 apps, payments, KYC, and trust tooling.
 
+Scoped to a single controlled-beta locality — **Gurgaon (Gurugram)** — per
+the "don't launch across multiple cities" decision. `MICRO_MARKETS` in
+`src/lib/geo.ts` is the only place a real deployment would need to touch to
+change or add a corridor.
+
 ## Run it
 
 ```
@@ -23,8 +28,8 @@ Open http://localhost:3000.
 
 | Role   | Phone        | Notes |
 |--------|--------------|-------|
-| Owner  | 9800000001   | Priya, PG operator — Bellandur. Has one intentionally stale bed to demo freshness enforcement. |
-| Owner  | 9800000002   | Mr. Rao — HSR Layout flat (approval-required booking) + Sarjapur room (instant booking). |
+| Owner  | 9800000001   | Priya, PG operator — DLF Cyber City. Has one intentionally stale bed to demo freshness enforcement. |
+| Owner  | 9800000002   | Mr. Rao — Golf Course Road flat (approval-required booking) + Sohna Road room (instant booking). |
 | Admin  | 0000000000   | Ops console. |
 | Seeker | *any number* | First login with a new number creates the account. |
 
@@ -46,7 +51,19 @@ Open http://localhost:3000.
 - **Owner tools** — one-tap reconfirm, per-listing booking mode, request
   inbox, performance dashboard against the PRD's own decision-gate
   thresholds (≥60% visit completion, ≥15% serious next-step rate).
-- **Ops console** — stale queue, visit timeline, trust report intake/action.
+- **Three booking modes** — instant confirm, owner-approval, and a
+  counter-proposal/reschedule flow (owner proposes a different open slot;
+  seeker accepts or declines) — `proposeReschedule`/`acceptReschedule` in
+  `src/lib/scheduling.ts`.
+- **In-app notification center** — event-triggered notices (requested,
+  confirmed, declined, cancelled, reschedule proposed/accepted) via a
+  `Notification` model and a bell icon in the top nav. Deliberately does
+  *not* cover time-based reminders ("visit in 1 hour") — that needs a
+  background scheduler, which this prototype doesn't have.
+- **Ops console with real overrides** — stale queue, an all-listings view
+  with pause/reactivate/mark-rented, a visit timeline with force-confirm/
+  cancel, and trust report intake/action. This is the "minimum admin
+  dashboard" — support can unblock a stuck booking without touching the DB.
 
 ## Scope cuts from the full PRD (deliberate, for a first prototype)
 
@@ -87,4 +104,6 @@ building against a release candidate for a prototype.
    scorecard as a real dashboard (the owner performance page already tracks
    the same definitions — extend it marketplace-wide).
 3. Replace mock auth with real OTP once there's a demand-side pilot cohort.
-4. Only then: mobile app, payments, KYC, Hop Tour.
+4. Add a background worker for time-based visit reminders (SMS/WhatsApp) —
+   the notification center currently only covers event-triggered notices.
+5. Only then: mobile app, payments, KYC, Hop Tour.

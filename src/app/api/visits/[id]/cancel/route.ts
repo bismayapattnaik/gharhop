@@ -17,9 +17,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     let actorRole: "seeker" | "host";
     if (visit.seekerId === user.id) actorRole = "seeker";
     else if (visit.inventoryItem.property.ownerId === user.id) actorRole = "host";
+    else if (user.role === "ADMIN") actorRole = "host"; // operational override, not the seeker's fault
     else throw new ForbiddenError("Not your visit");
 
-    const updated = await cancelVisit({ visitId: id, actorRole, reason: body.reason });
+    const updated = await cancelVisit({ visitId: id, actorRole, reason: body.reason ?? (user.role === "ADMIN" ? "Cancelled by GharHop support" : undefined) });
     return NextResponse.json({ visit: updated });
   } catch (e) {
     return handleApiError(e);

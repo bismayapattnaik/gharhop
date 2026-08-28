@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { formatDateTime } from "@/lib/format";
 
 const OUTCOMES = [
   { value: "PASS", label: "Not for me" },
@@ -11,7 +12,15 @@ const OUTCOMES = [
   { value: "COULD_NOT_VISIT", label: "Couldn't actually visit" },
 ];
 
-export default function VisitActions({ visit }: { visit: { id: string; status: string; outcome: string | null } }) {
+interface VisitLike {
+  id: string;
+  status: string;
+  outcome: string | null;
+  proposedByOwner?: boolean;
+  scheduledStart?: string;
+}
+
+export default function VisitActions({ visit }: { visit: VisitLike }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +43,23 @@ export default function VisitActions({ visit }: { visit: { id: string; status: s
     } finally {
       setLoading(false);
     }
+  }
+
+  if (visit.status === "REQUESTED" && visit.proposedByOwner) {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="w-full text-xs text-orange-400">
+          Owner proposed a new time{visit.scheduledStart ? `: ${formatDateTime(visit.scheduledStart)}` : ""}.
+        </p>
+        <ActionButton primary disabled={loading} onClick={() => call(`/api/visits/${visit.id}/accept-reschedule`)}>
+          Accept new time
+        </ActionButton>
+        <ActionButton disabled={loading} onClick={() => call(`/api/visits/${visit.id}/cancel`, { reason: "Declined proposed reschedule" })}>
+          Decline
+        </ActionButton>
+        {error && <Err msg={error} />}
+      </div>
+    );
   }
 
   if (visit.status === "REQUESTED") {

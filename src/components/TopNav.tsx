@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import LogoutButton from "@/components/LogoutButton";
+import NotificationBell from "@/components/NotificationBell";
 
 const LINKS: Record<string, { href: string; label: string }[]> = {
   SEEKER: [
@@ -46,6 +47,7 @@ export default async function TopNav() {
           )}
           {user ? (
             <div className={`flex items-center gap-3 border-l pl-4 ${dark ? "border-neutral-800" : "border-slate-200"}`}>
+              <NotificationBell dark={dark} />
               <span className={`hidden sm:inline ${dark ? "text-neutral-400" : "text-slate-500"}`}>
                 {user.name} <span className={`text-xs uppercase ${dark ? "text-neutral-600" : "text-slate-400"}`}>· {user.role}</span>
               </span>
