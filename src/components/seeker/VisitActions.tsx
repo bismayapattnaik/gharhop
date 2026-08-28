@@ -39,7 +39,7 @@ export default function VisitActions({ visit }: { visit: { id: string; status: s
   if (visit.status === "REQUESTED") {
     return (
       <div className="flex items-center gap-2">
-        <p className="text-xs text-slate-400">Waiting on owner response…</p>
+        <p className="text-xs text-neutral-500">Waiting on owner response…</p>
         <ActionButton disabled={loading} onClick={() => call(`/api/visits/${visit.id}/cancel`, { reason: "Seeker withdrew request" })}>
           Cancel request
         </ActionButton>
@@ -100,7 +100,11 @@ function OutcomeForm({ visitId, onDone }: { visitId: string; onDone: () => void 
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <select value={outcome} onChange={(e) => setOutcome(e.target.value)} className="rounded border border-slate-300 px-2 py-1 text-sm">
+      <select
+        value={outcome}
+        onChange={(e) => setOutcome(e.target.value)}
+        className="rounded border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm text-neutral-200"
+      >
         {OUTCOMES.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
@@ -120,7 +124,9 @@ function ActionButton({ children, onClick, disabled, primary }: { children: Reac
       onClick={onClick}
       disabled={disabled}
       className={`rounded-full px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${
-        primary ? "bg-teal-700 text-white hover:bg-teal-800" : "border border-slate-300 text-slate-600 hover:bg-slate-50"
+        primary
+          ? "bg-gradient-to-r from-orange-500 to-pink-600 text-white hover:brightness-110"
+          : "border border-neutral-700 text-neutral-300 hover:bg-neutral-800"
       }`}
     >
       {children}
@@ -129,5 +135,5 @@ function ActionButton({ children, onClick, disabled, primary }: { children: Reac
 }
 
 function Err({ msg }: { msg: string }) {
-  return <p className="text-xs text-red-600">{msg}</p>;
+  return <p className="text-xs text-red-400">{msg}</p>;
 }

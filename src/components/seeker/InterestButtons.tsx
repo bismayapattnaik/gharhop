@@ -18,13 +18,17 @@ export default function InterestButtons({ itemId, initialAction }: { itemId: str
     <div className="flex gap-2 text-sm">
       <button
         onClick={() => act("PASS")}
-        className={`rounded-full border px-3 py-1.5 ${action === "PASS" ? "border-slate-500 bg-slate-100" : "border-slate-300 hover:bg-slate-50"}`}
+        className={`rounded-full border px-3 py-1.5 text-neutral-300 ${
+          action === "PASS" ? "border-neutral-500 bg-neutral-700" : "border-neutral-700 hover:bg-neutral-800"
+        }`}
       >
         ✕ Pass
       </button>
       <button
         onClick={() => act("SHORTLIST")}
-        className={`rounded-full border px-3 py-1.5 ${action === "SHORTLIST" ? "border-teal-600 bg-teal-50 text-teal-700" : "border-slate-300 hover:bg-slate-50"}`}
+        className={`rounded-full border px-3 py-1.5 ${
+          action === "SHORTLIST" ? "border-orange-500/50 bg-orange-500/15 text-orange-400" : "border-neutral-700 text-neutral-300 hover:bg-neutral-800"
+        }`}
       >
         ♥ Shortlisted
       </button>

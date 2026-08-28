@@ -12,10 +12,10 @@ export default function FilterBar({
   budget: string;
 }) {
   return (
-    <form method="get" className="flex flex-wrap items-end gap-2 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2.5">
+    <form method="get" className="flex flex-wrap items-end gap-2 overflow-x-auto rounded-xl border border-neutral-800 bg-neutral-900 p-2.5">
       <div>
-        <label className="block text-xs font-medium text-slate-500">Near</label>
-        <select name="destination" defaultValue={destination} className="mt-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+        <label className="block text-xs font-medium text-neutral-500">Near</label>
+        <select name="destination" defaultValue={destination} className="mt-1 rounded-lg border border-neutral-700 bg-neutral-800 px-2 py-1.5 text-sm text-neutral-100">
           {MICRO_MARKETS.map((m) => (
             <option key={m.name} value={m.name}>
               {m.name}
@@ -24,8 +24,8 @@ export default function FilterBar({
         </select>
       </div>
       <div>
-        <label className="block text-xs font-medium text-slate-500">Type</label>
-        <select name="type" defaultValue={type} className="mt-1 rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+        <label className="block text-xs font-medium text-neutral-500">Type</label>
+        <select name="type" defaultValue={type} className="mt-1 rounded-lg border border-neutral-700 bg-neutral-800 px-2 py-1.5 text-sm text-neutral-100">
           <option value="ALL">All types</option>
           <option value="FLAT">Flat</option>
           <option value="ROOM">Private Room</option>
@@ -33,16 +33,19 @@ export default function FilterBar({
         </select>
       </div>
       <div>
-        <label className="block text-xs font-medium text-slate-500">Max budget (₹/mo)</label>
+        <label className="block text-xs font-medium text-neutral-500">Max budget (₹/mo)</label>
         <input
           type="number"
           name="budget"
           defaultValue={budget}
           placeholder="No limit"
-          className="mt-1 w-32 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+          className="mt-1 w-28 rounded-lg border border-neutral-700 bg-neutral-800 px-2 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500"
         />
       </div>
-      <button type="submit" className="rounded-full bg-teal-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-teal-800">
+      <button
+        type="submit"
+        className="rounded-full bg-gradient-to-r from-orange-500 to-pink-600 px-4 py-1.5 text-sm font-medium text-white hover:brightness-110"
+      >
         Apply
       </button>
     </form>

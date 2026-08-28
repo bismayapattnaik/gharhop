@@ -21,20 +21,24 @@ export default function ReportButton({ targetType, targetId }: { targetType: str
   }
 
   if (caseId) {
-    return <p className="text-xs text-slate-500">Report received — case #{caseId.slice(0, 8)}. Our trust team will review it.</p>;
+    return <p className="text-xs text-neutral-500">Report received — case #{caseId.slice(0, 8)}. Our trust team will review it.</p>;
   }
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="text-xs text-slate-400 underline hover:text-slate-600">
+      <button onClick={() => setOpen(true)} className="text-xs text-neutral-500 underline hover:text-neutral-300">
         Report this listing
       </button>
     );
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
-      <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full rounded border border-slate-300 px-2 py-1">
+    <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-3 text-sm text-neutral-200">
+      <select
+        value={category}
+        onChange={(e) => setCategory(e.target.value)}
+        className="w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1 text-neutral-200"
+      >
         {CATEGORIES.map((c) => (
           <option key={c} value={c}>
             {c}
@@ -45,14 +49,14 @@ export default function ReportButton({ targetType, targetId }: { targetType: str
         value={details}
         onChange={(e) => setDetails(e.target.value)}
         placeholder="Optional details"
-        className="mt-2 w-full rounded border border-slate-300 px-2 py-1"
+        className="mt-2 w-full rounded border border-neutral-600 bg-neutral-900 px-2 py-1 text-neutral-200 placeholder:text-neutral-500"
         rows={2}
       />
       <div className="mt-2 flex gap-2">
         <button onClick={submit} className="rounded-full bg-red-600 px-3 py-1 text-white">
           Submit report
         </button>
-        <button onClick={() => setOpen(false)} className="rounded-full border border-slate-300 px-3 py-1">
+        <button onClick={() => setOpen(false)} className="rounded-full border border-neutral-600 px-3 py-1 text-neutral-300">
           Cancel
         </button>
       </div>

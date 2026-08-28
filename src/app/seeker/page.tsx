@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { isDiscoverable } from "@/lib/freshness";
 import { haversineKm, MICRO_MARKETS } from "@/lib/geo";
 import FilterBar from "@/components/seeker/FilterBar";
+import FilterToggle from "@/components/seeker/FilterToggle";
 import SwipeDeck, { type FeedItem } from "@/components/seeker/SwipeDeck";
 import type { InventoryType } from "@prisma/client";
 
@@ -55,13 +56,26 @@ export default async function SeekerFeedPage({
     }))
     .sort((a, b) => a.distanceKm - b.distanceKm);
 
+  const hasActiveFilters = Boolean(sp.type && sp.type !== "ALL") || Boolean(sp.budget);
+
   return (
     <div>
-      <div className="sticky top-0 z-10 border-b border-slate-100 bg-slate-50/95 px-4 pb-3 pt-4 backdrop-blur">
-        <h1 className="text-xl font-bold text-slate-900">Discover</h1>
-        <div className="mt-3">
+      <div className="sticky top-0 z-10 border-b border-neutral-900 bg-neutral-950/95 px-4 pb-3 pt-4 backdrop-blur">
+        <FilterToggle
+          active={hasActiveFilters}
+          greeting={
+            <div>
+              <p className="text-sm text-neutral-400">
+                Hello {user.name.split(" ")[0]}! <span aria-hidden>👋</span>
+              </p>
+              <p className="flex items-center gap-1 text-lg font-bold text-white">
+                <span aria-hidden>📍</span> {destination.name}
+              </p>
+            </div>
+          }
+        >
           <FilterBar destination={destination.name} type={sp.type ?? "ALL"} budget={sp.budget ?? ""} />
-        </div>
+        </FilterToggle>
       </div>
       <SwipeDeck items={feed} destination={destination.name} />
     </div>

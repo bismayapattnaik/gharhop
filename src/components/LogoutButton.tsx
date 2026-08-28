@@ -3,13 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function LogoutButton() {
+export default function LogoutButton({ dark }: { dark?: boolean }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   return (
     <button
-      className="text-slate-500 hover:text-red-600 disabled:opacity-50"
+      className={dark ? "text-neutral-400 hover:text-red-400 disabled:opacity-50" : "text-slate-500 hover:text-red-600 disabled:opacity-50"}
       disabled={loading}
       onClick={async () => {
         setLoading(true);

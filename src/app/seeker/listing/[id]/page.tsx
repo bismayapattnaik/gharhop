@@ -8,6 +8,7 @@ import SlotPicker from "@/components/seeker/SlotPicker";
 import InterestButtons from "@/components/seeker/InterestButtons";
 import ReportButton from "@/components/ReportButton";
 import { formatInr, TYPE_LABEL } from "@/lib/format";
+import { gradientFor, TYPE_EMOJI } from "@/lib/visual";
 
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -30,68 +31,89 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
 
   const status = derivedStatus(item);
 
+  const tags = [
+    { icon: "🛋️", label: item.furnishing },
+    { icon: TYPE_EMOJI[item.type], label: TYPE_LABEL[item.type] },
+    { icon: "📅", label: `From ${item.availableFrom.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` },
+    ...(item.occupancyPolicy ? [{ icon: "👥", label: item.occupancyPolicy }] : []),
+  ];
+
   return (
-    <div className="mx-auto max-w-2xl space-y-4 px-4 py-4">
-      <Link href="/seeker" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-teal-700">
-        ← Back to Discover
-      </Link>
-      <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <div className="flex items-start justify-between">
+    <div className="pb-2">
+      {/* Photo header, floating back button */}
+      <div className="relative h-64 w-full" style={{ background: gradientFor(item.id) }}>
+        <span className="pointer-events-none absolute -bottom-8 -right-4 text-[9rem] leading-none opacity-20">
+          {TYPE_EMOJI[item.type]}
+        </span>
+        <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
+          <Link
+            href="/seeker"
+            aria-label="Back to Discover"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm"
+          >
+            ←
+          </Link>
+          <Badge tone="dark" status={status} label={status === "ACTIVE" ? freshnessAgeLabel(item.lastConfirmedAt) : undefined} />
+        </div>
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent p-4 pt-12">
+          <h1 className="text-2xl font-bold text-white">{item.property.title}</h1>
+          <p className="text-sm text-white/70">
+            {item.property.area} · {TYPE_LABEL[item.type]} · {item.configuration}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-5 px-4 pt-4">
+        <div className="flex items-center justify-between rounded-2xl bg-neutral-900 p-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">{item.property.title}</h1>
-            <p className="text-slate-500">{item.property.area} · {TYPE_LABEL[item.type]} · {item.configuration}</p>
+            <p className="text-xs text-neutral-500">Monthly total</p>
+            <p className="text-xl font-bold text-white">{formatInr(item.rentAmount)}</p>
           </div>
-          <Badge status={status} label={status === "ACTIVE" ? freshnessAgeLabel(item.lastConfirmedAt) : undefined} />
+          <div className="h-8 w-px bg-neutral-800" />
+          <div>
+            <p className="text-xs text-neutral-500">Deposit</p>
+            <p className="text-lg font-semibold text-neutral-200">{formatInr(item.depositAmount)}</p>
+          </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <Fact label="Monthly rent" value={formatInr(item.rentAmount)} />
-          <Fact label="Deposit" value={formatInr(item.depositAmount)} />
-          <Fact label="Furnishing" value={item.furnishing} />
-          <Fact label="Available from" value={item.availableFrom.toLocaleDateString("en-IN")} />
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">Details</p>
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <span key={tag.label} className="rounded-full bg-neutral-800 px-3 py-1.5 text-sm text-neutral-200">
+                <span aria-hidden>{tag.icon}</span> {tag.label}
+              </span>
+            ))}
+          </div>
         </div>
-        {item.occupancyPolicy && (
-          <p className="mt-3 text-sm text-slate-500">Occupancy policy: {item.occupancyPolicy}</p>
-        )}
 
-        <p className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+        <p className="rounded-lg bg-neutral-900 px-3 py-2 text-xs text-neutral-500">
           Exact address is shared once your visit is confirmed. Right now you&apos;re seeing the general area only —
           this protects both seekers and owners from unnecessary exposure (GharHop privacy policy, section 10).
         </p>
 
-        <div className="mt-4 flex items-center justify-between">
+        <div className="flex items-center justify-between">
           <InterestButtons itemId={item.id} initialAction={interest?.action} />
           <ReportButton targetType="LISTING" targetId={item.id} />
         </div>
-      </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <h2 className="text-lg font-semibold text-slate-900">Book a visit</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Pick an open slot below. It&apos;s a real hold on the owner&apos;s calendar — not a wish list.
-        </p>
-        <div className="mt-4">
+        <div className="rounded-2xl bg-neutral-900 p-4">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-neutral-500">Book a visit</p>
+          <p className="mb-4 text-sm text-neutral-400">
+            Pick an open slot below. It&apos;s a real hold on the owner&apos;s calendar — not a wish list.
+          </p>
           {status === "ACTIVE" ? (
             <SlotPicker
               bookingMode={item.bookingMode}
               slots={item.slots.map((s) => ({ id: s.id, startTime: s.startTime.toISOString(), endTime: s.endTime.toISOString() }))}
             />
           ) : (
-            <p className="rounded-lg bg-red-50 p-4 text-sm text-red-700">
+            <p className="rounded-lg bg-red-500/10 p-4 text-sm text-red-400">
               This listing is {status.toLowerCase()} and isn&apos;t currently bookable.
             </p>
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="font-medium text-slate-800">{value}</p>
     </div>
   );
 }

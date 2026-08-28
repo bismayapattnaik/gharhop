@@ -48,9 +48,9 @@ export default function LoginForm({ initialRole }: { initialRole: string }) {
   return (
     <form onSubmit={submit} className="mt-6 space-y-4">
       <div>
-        <label className="block text-sm font-medium text-slate-700">Phone number</label>
+        <label className="block text-sm font-medium text-neutral-300">Phone number</label>
         <input
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-teal-600 focus:outline-none"
+          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-white placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
           placeholder="98765 43210"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
@@ -58,18 +58,18 @@ export default function LoginForm({ initialRole }: { initialRole: string }) {
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700">Name (first time only)</label>
+        <label className="block text-sm font-medium text-neutral-300">Name (first time only)</label>
         <input
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-teal-600 focus:outline-none"
+          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-white placeholder:text-neutral-500 focus:border-orange-500 focus:outline-none"
           placeholder="Aditi Rao"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700">I am a...</label>
+        <label className="block text-sm font-medium text-neutral-300">I am a...</label>
         <select
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-teal-600 focus:outline-none"
+          className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-white focus:border-orange-500 focus:outline-none"
           value={role}
           onChange={(e) => setRole(e.target.value)}
         >
@@ -80,11 +80,11 @@ export default function LoginForm({ initialRole }: { initialRole: string }) {
           ))}
         </select>
       </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-full bg-teal-700 px-4 py-2.5 font-medium text-white hover:bg-teal-800 disabled:opacity-50"
+        className="w-full rounded-full bg-gradient-to-r from-orange-500 via-red-500 to-pink-600 px-4 py-2.5 font-medium text-white hover:brightness-110 disabled:opacity-50"
       >
         {loading ? "Signing in..." : "Continue"}
       </button>

@@ -22,6 +22,7 @@ export interface FeedItem {
 
 const SWIPE_THRESHOLD = 110;
 const FLY_OUT_MS = 260;
+const STACK_HEIGHT = 560;
 
 export default function SwipeDeck({ items, destination }: { items: FeedItem[]; destination: string }) {
   const [deck, setDeck] = useState(items);
@@ -84,8 +85,8 @@ export default function SwipeDeck({ items, destination }: { items: FeedItem[]; d
 
   if (deck.length === 0) {
     return (
-      <div className="mx-4 mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-        <p className="font-medium text-slate-700">You&apos;ve seen everything fresh near {destination}.</p>
+      <div className="mx-4 mt-6 rounded-2xl border border-dashed border-neutral-700 bg-neutral-900 p-10 text-center text-neutral-400">
+        <p className="font-medium text-neutral-200">You&apos;ve seen everything fresh near {destination}.</p>
         <p className="mt-1 text-sm">Try a different area, raise your budget, or check back — owners reconfirm availability daily.</p>
       </div>
     );
@@ -97,16 +98,16 @@ export default function SwipeDeck({ items, destination }: { items: FeedItem[]; d
 
   return (
     <div className="px-4 pt-4">
-      {toast && <div className="mb-3 rounded-lg bg-teal-50 px-4 py-2 text-sm text-teal-800">{toast}</div>}
-      <p className="mb-2 text-xs text-slate-400">
+      {toast && <div className="mb-3 rounded-lg bg-orange-500/15 px-4 py-2 text-sm text-orange-300">{toast}</div>}
+      <p className="mb-2 text-xs text-neutral-500">
         {deck.length} fresh {deck.length === 1 ? "match" : "matches"} near {destination}
       </p>
 
-      <div className="relative" style={{ height: 520 }}>
+      <div className="relative" style={{ height: STACK_HEIGHT }}>
         {deck.slice(1, 3).map((item, i) => (
           <div
             key={item.id}
-            className="absolute inset-0 rounded-3xl border border-slate-200 bg-white shadow-sm"
+            className="absolute inset-0 rounded-3xl border border-neutral-800 bg-neutral-900"
             style={{ transform: `translateY(${(i + 1) * 8}px) scale(${1 - (i + 1) * 0.03})`, zIndex: 10 - i }}
           />
         ))}
@@ -126,54 +127,84 @@ export default function SwipeDeck({ items, destination }: { items: FeedItem[]; d
             touchAction: "none",
             zIndex: 20,
           }}
-          className="absolute inset-0 flex select-none flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg"
+          className="absolute inset-0 flex select-none flex-col overflow-hidden rounded-3xl bg-neutral-900 shadow-2xl shadow-black/50"
         >
-          {/* Photo header — gradient placeholder until real media is wired up (PRD GH-404) */}
-          <div className="relative h-56 w-full overflow-hidden" style={{ background: gradientFor(top.id) }}>
-            <span className="pointer-events-none absolute -bottom-6 -right-4 text-[9rem] leading-none opacity-15">
+          {/* Photo — gradient placeholder until real media is wired up (PRD GH-404) */}
+          <div className="relative h-[340px] w-full shrink-0 overflow-hidden" style={{ background: gradientFor(top.id) }}>
+            <span className="pointer-events-none absolute -bottom-8 -right-6 text-[10rem] leading-none opacity-20">
               {TYPE_EMOJI[top.type]}
             </span>
+
             <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
-              <span className="rounded-full bg-black/30 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+              <span className="rounded-full bg-black/40 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
                 {top.distanceKm.toFixed(1)} km away
               </span>
-              <span className="rounded-full bg-black/30 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+              <span className="rounded-full bg-black/40 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-sm">
                 {freshnessAgeLabel(new Date(top.lastConfirmedAt))}
               </span>
             </div>
 
-            {/* Tinder-style LIKE / NOPE stamps, tied to live drag distance */}
+            {/* Drag feedback stamps */}
             <div
-              className="absolute left-4 top-16 rounded-lg border-4 border-emerald-400 px-3 py-1 text-2xl font-extrabold tracking-wider text-emerald-400"
+              className="absolute left-5 top-1/3 rounded-lg border-4 border-orange-400 px-3 py-1 text-3xl font-extrabold tracking-wider text-orange-400"
               style={{ opacity: likeOpacity, transform: "rotate(-12deg)" }}
             >
               LIKE
             </div>
             <div
-              className="absolute right-4 top-16 rounded-lg border-4 border-red-400 px-3 py-1 text-2xl font-extrabold tracking-wider text-red-400"
+              className="absolute right-5 top-1/3 rounded-lg border-4 border-rose-400 px-3 py-1 text-3xl font-extrabold tracking-wider text-rose-400"
               style={{ opacity: nopeOpacity, transform: "rotate(12deg)" }}
             >
               NOPE
             </div>
 
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4 pt-10">
-              <p className="text-lg font-bold text-white">{top.property.title}</p>
-              <p className="text-sm text-white/80">{top.property.area} · {TYPE_LABEL[top.type]}</p>
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent p-4 pt-16">
+              <p className="text-xl font-bold text-white">{top.property.title}</p>
+              <p className="text-sm text-white/70">
+                {top.property.area} · {TYPE_LABEL[top.type]}
+              </p>
             </div>
           </div>
 
+          {/* Floating action cluster — straddles the photo/panel seam */}
+          <div className="relative z-10 -mt-7 flex items-center justify-center gap-5">
+            <button
+              aria-label="Pass"
+              disabled={!!leaving}
+              onClick={() => resolve(top, "nope")}
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-neutral-800 text-2xl text-rose-400 shadow-lg shadow-black/40 transition hover:scale-105 active:scale-95 disabled:opacity-50"
+            >
+              ✕
+            </button>
+            <Link
+              href={`/seeker/listing/${top.id}`}
+              aria-label="View details"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-neutral-800 text-lg text-white shadow-md shadow-black/40 transition hover:scale-105"
+            >
+              ⓘ
+            </Link>
+            <button
+              aria-label="Interested"
+              disabled={!!leaving}
+              onClick={() => resolve(top, "like")}
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 via-red-500 to-pink-600 text-2xl text-white shadow-lg shadow-black/40 transition hover:scale-105 active:scale-95 disabled:opacity-50"
+            >
+              ♥
+            </button>
+          </div>
+
           {/* Facts panel */}
-          <div className="flex-1 space-y-2.5 overflow-y-auto p-3.5">
+          <div className="flex-1 space-y-2.5 overflow-y-auto px-4 pb-4 pt-2">
             <div className="grid grid-cols-2 gap-3 text-sm">
               <Fact label="Monthly total" value={formatInr(top.rentAmount)} />
               <Fact label="Deposit" value={formatInr(top.depositAmount)} />
               <Fact label="Configuration" value={top.configuration} />
               <Fact label="Furnishing" value={top.furnishing} />
             </div>
-            <div className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            <div className="rounded-lg bg-neutral-800/70 px-3 py-2 text-sm text-neutral-300">
               {top.slotCount > 0 && top.nextSlot ? (
                 <>
-                  Next visit slot: <span className="font-medium text-slate-800">{formatDateTime(top.nextSlot.startTime)}</span> ·{" "}
+                  Next visit slot: <span className="font-medium text-white">{formatDateTime(top.nextSlot.startTime)}</span> ·{" "}
                   {top.slotCount} open slot{top.slotCount === 1 ? "" : "s"} this week
                 </>
               ) : (
@@ -183,32 +214,6 @@ export default function SwipeDeck({ items, destination }: { items: FeedItem[]; d
           </div>
         </div>
       </div>
-
-      {/* Round action buttons — mirror the drag gesture for accessibility (GH-402) */}
-      <div className="mt-5 flex items-center justify-center gap-6">
-        <button
-          aria-label="Pass"
-          disabled={!!leaving}
-          onClick={() => resolve(top, "nope")}
-          className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-red-200 bg-white text-2xl text-red-500 shadow-sm transition hover:scale-105 hover:bg-red-50 active:scale-95 disabled:opacity-50"
-        >
-          ✕
-        </button>
-        <Link
-          href={`/seeker/listing/${top.id}`}
-          className="flex h-11 items-center justify-center rounded-full bg-teal-700 px-5 text-sm font-medium text-white shadow-sm hover:bg-teal-800"
-        >
-          Details &amp; book
-        </Link>
-        <button
-          aria-label="Interested"
-          disabled={!!leaving}
-          onClick={() => resolve(top, "like")}
-          className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-teal-200 bg-white text-2xl text-teal-600 shadow-sm transition hover:scale-105 hover:bg-teal-50 active:scale-95 disabled:opacity-50"
-        >
-          ♥
-        </button>
-      </div>
     </div>
   );
 }
@@ -216,8 +221,8 @@ export default function SwipeDeck({ items, destination }: { items: FeedItem[]; d
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="font-medium text-slate-800">{value}</p>
+      <p className="text-xs text-neutral-500">{label}</p>
+      <p className="font-medium text-neutral-100">{value}</p>
     </div>
   );
 }

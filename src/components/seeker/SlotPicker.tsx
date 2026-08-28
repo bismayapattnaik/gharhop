@@ -80,7 +80,7 @@ export default function SlotPicker({ bookingMode, slots }: { bookingMode: string
 
   if (success) {
     return (
-      <div className="rounded-lg bg-emerald-50 p-4 text-emerald-800">
+      <div className="rounded-lg bg-emerald-500/15 p-4 text-emerald-300">
         <p className="font-medium">{success}</p>
         <a href="/seeker/visits" className="mt-2 inline-block text-sm underline">
           Go to My Visits →
@@ -90,7 +90,11 @@ export default function SlotPicker({ bookingMode, slots }: { bookingMode: string
   }
 
   if (slots.length === 0) {
-    return <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">No open visit slots right now. Check back — owners publish new slots regularly.</p>;
+    return (
+      <p className="rounded-lg bg-neutral-800 p-4 text-sm text-neutral-400">
+        No open visit slots right now. Check back — owners publish new slots regularly.
+      </p>
+    );
   }
 
   return (
@@ -101,8 +105,8 @@ export default function SlotPicker({ bookingMode, slots }: { bookingMode: string
             key={slot.id}
             disabled={loading}
             onClick={() => requestSlot(slot)}
-            className={`rounded-lg border px-3 py-2 text-left text-sm ${
-              selected?.id === slot.id ? "border-teal-600 bg-teal-50" : "border-slate-200 hover:border-teal-400"
+            className={`rounded-lg border px-3 py-2 text-left text-sm text-neutral-200 ${
+              selected?.id === slot.id ? "border-orange-500 bg-orange-500/10" : "border-neutral-700 hover:border-orange-500/50"
             }`}
           >
             {formatDateTime(slot.startTime)}
@@ -110,17 +114,20 @@ export default function SlotPicker({ bookingMode, slots }: { bookingMode: string
         ))}
       </div>
 
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
 
       {hold && (
-        <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3">
-          <p className="text-sm text-amber-800">
-            Slot held for you — expires in <span className="font-semibold">{Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}</span>
+        <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+          <p className="text-sm text-amber-300">
+            Slot held for you — expires in{" "}
+            <span className="font-semibold">
+              {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}
+            </span>
           </p>
           <button
             onClick={confirmVisit}
             disabled={loading || remaining <= 0}
-            className="mt-2 w-full rounded-full bg-teal-700 py-2 font-medium text-white hover:bg-teal-800 disabled:opacity-50"
+            className="mt-2 w-full rounded-full bg-gradient-to-r from-orange-500 to-pink-600 py-2 font-medium text-white hover:brightness-110 disabled:opacity-50"
           >
             {bookingMode === "INSTANT" ? "Confirm visit" : "Request visit (owner will confirm)"}
           </button>
