@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { formatInr, TYPE_LABEL, formatDateTime } from "@/lib/format";
 import { freshnessAgeLabel } from "@/lib/freshness";
-import { gradientFor, TYPE_EMOJI } from "@/lib/visual";
+import { gradientFor } from "@/lib/visual";
 
 export interface FeedItem {
   id: string;
@@ -18,6 +18,7 @@ export interface FeedItem {
   property: { title: string; area: string };
   nextSlot?: { startTime: string } | null;
   slotCount: number;
+  coverPhoto?: string | null;
 }
 
 const SWIPE_THRESHOLD = 110;
@@ -129,11 +130,12 @@ export default function SwipeDeck({ items, destination }: { items: FeedItem[]; d
           }}
           className="absolute inset-0 flex select-none flex-col overflow-hidden rounded-3xl bg-neutral-900 shadow-2xl shadow-black/50"
         >
-          {/* Photo — gradient placeholder until real media is wired up (PRD GH-404) */}
-          <div className="relative h-[340px] w-full shrink-0 overflow-hidden" style={{ background: gradientFor(top.id) }}>
-            <span className="pointer-events-none absolute -bottom-8 -right-6 text-[10rem] leading-none opacity-20">
-              {TYPE_EMOJI[top.type]}
-            </span>
+          {/* Photo — real demo photo when assigned, gradient as fallback (PRD GH-404 media provenance is P1) */}
+          <div className="relative h-[340px] w-full shrink-0 overflow-hidden" style={!top.coverPhoto ? { background: gradientFor(top.id) } : undefined}>
+            {top.coverPhoto && (
+              // eslint-disable-next-line @next/next/no-img-element -- fixed demo assets
+              <img src={top.coverPhoto} alt={top.property.title} className="absolute inset-0 h-full w-full object-cover" />
+            )}
 
             <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
               <span className="rounded-full bg-black/40 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">

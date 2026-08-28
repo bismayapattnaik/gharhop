@@ -64,6 +64,14 @@ Open http://localhost:3000.
   with pause/reactivate/mark-rented, a visit timeline with force-confirm/
   cancel, and trust report intake/action. This is the "minimum admin
   dashboard" — support can unblock a stuck booking without touching the DB.
+- **Real demo photos + a 360° preview** — every listing (seeded or newly
+  created) is auto-assigned a real photo set by inventory type (`src/lib/
+  photos.ts`, images in `public/photos/`, sourced from free-license Unsplash
+  photos) instead of a placeholder gradient, plus a "360° View" button that
+  opens a drag-to-pan viewer (`components/Panorama360.tsx`). That viewer is
+  an honest drag-to-pan wide photo, not a true equirectangular/spherical
+  render — a real 3D capture pipeline (Matterport-style) is a provider
+  integration beyond a prototype's scope.
 
 ## Scope cuts from the full PRD (deliberate, for a first prototype)
 
@@ -79,6 +87,9 @@ Open http://localhost:3000.
   is validated.
 - **No background jobs** — slot-hold expiry is checked lazily on read
   (`releaseIfExpired` in `scheduling.ts`) rather than via a cron worker.
+- **No real photo/media upload** — photos are auto-assigned demo sets by
+  type (see above), not owner-uploaded. No media provenance/verification
+  pipeline (PRD GH-404) either.
   Fine for a prototype; replace with a real queue before production.
 
 ## Environment notes

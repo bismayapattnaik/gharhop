@@ -8,7 +8,10 @@ import SlotPicker from "@/components/seeker/SlotPicker";
 import InterestButtons from "@/components/seeker/InterestButtons";
 import ReportButton from "@/components/ReportButton";
 import { formatInr, TYPE_LABEL } from "@/lib/format";
-import { gradientFor, TYPE_EMOJI } from "@/lib/visual";
+import { TYPE_EMOJI } from "@/lib/visual";
+import { parsePhotos } from "@/lib/photos";
+import PhotoGallery from "@/components/PhotoGallery";
+import Panorama360Trigger from "@/components/Panorama360Trigger";
 
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -30,6 +33,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   });
 
   const status = derivedStatus(item);
+  const photos = parsePhotos(item.photos);
 
   const tags = [
     { icon: "🛋️", label: item.furnishing },
@@ -41,11 +45,9 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="pb-2">
       {/* Photo header, floating back button */}
-      <div className="relative h-64 w-full overflow-hidden" style={{ background: gradientFor(item.id) }}>
-        <span className="pointer-events-none absolute -bottom-8 -right-4 text-[9rem] leading-none opacity-20">
-          {TYPE_EMOJI[item.type]}
-        </span>
-        <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
+      <div className="relative h-64 w-full overflow-hidden bg-neutral-800">
+        <PhotoGallery photos={photos} alt={item.property.title} />
+        <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between p-3">
           <Link
             href="/seeker"
             aria-label="Back to Discover"
@@ -53,9 +55,12 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           >
             ←
           </Link>
-          <Badge tone="dark" status={status} label={status === "ACTIVE" ? freshnessAgeLabel(item.lastConfirmedAt) : undefined} />
+          <div className="flex items-center gap-2">
+            {item.panoramaUrl && <Panorama360Trigger imageUrl={item.panoramaUrl} title={item.property.title} />}
+            <Badge tone="dark" status={status} label={status === "ACTIVE" ? freshnessAgeLabel(item.lastConfirmedAt) : undefined} />
+          </div>
         </div>
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent p-4 pt-12">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent p-4 pt-12">
           <h1 className="truncate text-2xl font-bold text-white">{item.property.title}</h1>
           <p className="truncate text-sm text-white/70">
             {item.property.area} · {TYPE_LABEL[item.type]} · {item.configuration}

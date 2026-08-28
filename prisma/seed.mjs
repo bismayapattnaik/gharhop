@@ -6,6 +6,22 @@ const prisma = new PrismaClient();
 
 const HOUR = 60 * 60 * 1000;
 
+// Mirrors src/lib/photos.ts — duplicated here since this is a plain Node
+// script (no TS path aliases available outside the Next app).
+const DEMO_PHOTOS = {
+  FLAT: ["/photos/flat-1.jpg", "/photos/flat-2.jpg", "/photos/flat-3.jpg", "/photos/flat-4.jpg"],
+  ROOM: ["/photos/room-1.jpg", "/photos/room-2.jpg", "/photos/room-3.jpg", "/photos/room-4.jpg"],
+  PG_BED: ["/photos/pgbed-1.jpg", "/photos/pgbed-2.jpg", "/photos/pgbed-3.jpg", "/photos/pgbed-4.jpg", "/photos/pgbed-5.jpg"],
+};
+const DEMO_PANORAMA = {
+  FLAT: "/photos/flat-3.jpg",
+  ROOM: "/photos/room-3.jpg",
+  PG_BED: "/photos/pgbed-1.jpg",
+};
+function demoMedia(type) {
+  return { photos: JSON.stringify(DEMO_PHOTOS[type]), panoramaUrl: DEMO_PANORAMA[type] };
+}
+
 function futureSlot(daysFromNow, hour) {
   const d = new Date();
   d.setDate(d.getDate() + daysFromNow);
@@ -14,6 +30,7 @@ function futureSlot(daysFromNow, hour) {
 }
 
 async function main() {
+  await prisma.notification.deleteMany();
   await prisma.trustReport.deleteMany();
   await prisma.visit.deleteMany();
   await prisma.slotHold.deleteMany();
@@ -49,6 +66,7 @@ async function main() {
             status: "ACTIVE",
             bookingMode: "INSTANT",
             lastConfirmedAt: new Date(),
+            ...demoMedia("PG_BED"),
           },
           {
             type: "PG_BED",
@@ -62,6 +80,7 @@ async function main() {
             bookingMode: "INSTANT",
             lastConfirmedAt: new Date(Date.now() - 90 * HOUR), // stale on purpose
             freshnessTtlHours: 72,
+            ...demoMedia("PG_BED"),
           },
         ],
       },
@@ -89,6 +108,7 @@ async function main() {
             status: "ACTIVE",
             bookingMode: "APPROVAL",
             lastConfirmedAt: new Date(),
+            ...demoMedia("FLAT"),
           },
         ],
       },
@@ -116,6 +136,7 @@ async function main() {
             status: "ACTIVE",
             bookingMode: "INSTANT",
             lastConfirmedAt: new Date(),
+            ...demoMedia("ROOM"),
           },
         ],
       },

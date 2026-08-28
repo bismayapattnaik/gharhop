@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { handleApiError } from "@/lib/api-helpers";
+import { defaultPhotosFor, defaultPanoramaFor } from "@/lib/photos";
+import type { InventoryType } from "@prisma/client";
 
 // Creates a Property + its first InventoryItem together (GH-O201, GH-O203).
 // The owner console lets an owner add more inventory items to a property later.
@@ -37,6 +39,8 @@ export async function POST(request: Request) {
             occupancyPolicy: occupancyPolicy || null,
             availableFrom: availableFrom ? new Date(availableFrom) : new Date(),
             status: "DRAFT",
+            photos: defaultPhotosFor(type as InventoryType),
+            panoramaUrl: defaultPanoramaFor(type as InventoryType),
           },
         },
       },

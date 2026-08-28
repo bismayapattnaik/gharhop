@@ -5,6 +5,7 @@ import Badge from "@/components/Badge";
 import VisitActions from "@/components/seeker/VisitActions";
 import { formatDateTime, TYPE_LABEL } from "@/lib/format";
 import { gradientFor, TYPE_EMOJI } from "@/lib/visual";
+import { parsePhotos } from "@/lib/photos";
 
 export default async function SeekerVisitsPage() {
   const user = await getCurrentUser();
@@ -26,14 +27,17 @@ export default async function SeekerVisitsPage() {
         </p>
       )}
       <div className="space-y-3">
-        {visits.map((visit) => (
+        {visits.map((visit) => {
+          const cover = parsePhotos(visit.inventoryItem.photos)[0];
+          return (
           <div key={visit.id} className="overflow-hidden rounded-xl bg-neutral-900">
             <div className="flex items-center gap-3 p-3">
               <div
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-xl"
-                style={{ background: gradientFor(visit.inventoryItem.id) }}
+                className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg text-xl"
+                style={!cover ? { background: gradientFor(visit.inventoryItem.id) } : undefined}
               >
-                {TYPE_EMOJI[visit.inventoryItem.type]}
+                {/* eslint-disable-next-line @next/next/no-img-element -- fixed demo asset */}
+                {cover ? <img src={cover} alt="" className="h-full w-full object-cover" /> : TYPE_EMOJI[visit.inventoryItem.type]}
               </div>
               <div className="flex-1">
                 <div className="flex items-start justify-between gap-2">
@@ -63,7 +67,8 @@ export default async function SeekerVisitsPage() {
               />
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

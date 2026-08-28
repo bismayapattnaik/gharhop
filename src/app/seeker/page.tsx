@@ -6,6 +6,7 @@ import { haversineKm, MICRO_MARKETS } from "@/lib/geo";
 import FilterBar from "@/components/seeker/FilterBar";
 import FilterToggle from "@/components/seeker/FilterToggle";
 import SwipeDeck, { type FeedItem } from "@/components/seeker/SwipeDeck";
+import { parsePhotos } from "@/lib/photos";
 import type { InventoryType } from "@prisma/client";
 
 export default async function SeekerFeedPage({
@@ -53,6 +54,7 @@ export default async function SeekerFeedPage({
       property: { title: item.property.title, area: item.property.area },
       nextSlot: item.slots[0] ? { startTime: item.slots[0].startTime.toISOString() } : null,
       slotCount: item.slots.length,
+      coverPhoto: parsePhotos(item.photos)[0] ?? null,
     }))
     .sort((a, b) => a.distanceKm - b.distanceKm);
 
