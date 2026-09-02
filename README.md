@@ -64,14 +64,26 @@ Open http://localhost:3000.
   with pause/reactivate/mark-rented, a visit timeline with force-confirm/
   cancel, and trust report intake/action. This is the "minimum admin
   dashboard" — support can unblock a stuck booking without touching the DB.
-- **Real demo photos + a 360° preview** — every listing (seeded or newly
-  created) is auto-assigned a real photo set by inventory type (`src/lib/
-  photos.ts`, images in `public/photos/`, sourced from free-license Unsplash
-  photos) instead of a placeholder gradient, plus a "360° View" button that
-  opens a drag-to-pan viewer (`components/Panorama360.tsx`). That viewer is
-  an honest drag-to-pan wide photo, not a true equirectangular/spherical
-  render — a real 3D capture pipeline (Matterport-style) is a provider
-  integration beyond a prototype's scope.
+- **Real demo photos + owner photo upload + Room Tour** — every listing is
+  auto-assigned a real photo set by inventory type (`src/lib/photos.ts`,
+  images in `public/photos/`, sourced from free-license Unsplash photos)
+  until an owner uploads real ones via `src/app/api/items/[id]/photos/
+  route.ts` (multipart upload to local disk under `public/uploads/<itemId>/`,
+  ownership-checked, type/size validated, replaces the demo set on first
+  upload). Seekers view either set through a "Room Tour" — step through the
+  photos with a drag-to-pan effect on each (`components/Panorama360.tsx`).
+  Honest framing: this is a drag-to-pan photo viewer, not a true
+  equirectangular/spherical or photogrammetry-based 3D reconstruction — that's
+  a genuinely hard ML/capture problem (Matterport-style), not something to fake.
+- **Real browser geolocation** — a "📍 Use my current location" button calls
+  the actual Geolocation API and re-sorts the feed by real distance from the
+  device's GPS position (`components/seeker/UseLocationButton.tsx`), falling
+  back to the manual micro-market picker on denial/error (PRD GH-201 "denial
+  never blocks search"). Explicitly **not** built: scraping competitor
+  listings (99acres/Magicbricks/Housing.com/NoBroker) to seed "real" nearby
+  inventory — that would violate their terms of service and is explicitly
+  against the PRD's own guidance ("do not scrape and republish competitor
+  inventory"). Nearby results are only ever GharHop's own listings.
 
 ## Scope cuts from the full PRD (deliberate, for a first prototype)
 
@@ -87,10 +99,11 @@ Open http://localhost:3000.
   is validated.
 - **No background jobs** — slot-hold expiry is checked lazily on read
   (`releaseIfExpired` in `scheduling.ts`) rather than via a cron worker.
-- **No real photo/media upload** — photos are auto-assigned demo sets by
-  type (see above), not owner-uploaded. No media provenance/verification
-  pipeline (PRD GH-404) either.
   Fine for a prototype; replace with a real queue before production.
+- **Uploads go to local disk, not object storage** — `public/uploads/` works
+  fine for `next dev` but isn't durable/scalable; swap for S3-compatible
+  storage (per the PRD technical blueprint) before any real deployment. No
+  media provenance/verification pipeline (PRD GH-404) either.
 
 ## Environment notes
 

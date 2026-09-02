@@ -5,6 +5,7 @@ import { isDiscoverable } from "@/lib/freshness";
 import { haversineKm, MICRO_MARKETS } from "@/lib/geo";
 import FilterBar from "@/components/seeker/FilterBar";
 import FilterToggle from "@/components/seeker/FilterToggle";
+import UseLocationButton from "@/components/seeker/UseLocationButton";
 import SwipeDeck, { type FeedItem } from "@/components/seeker/SwipeDeck";
 import { parsePhotos } from "@/lib/photos";
 import type { InventoryType } from "@prisma/client";
@@ -12,14 +13,22 @@ import type { InventoryType } from "@prisma/client";
 export default async function SeekerFeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ destination?: string; type?: string; budget?: string }>;
+  searchParams: Promise<{ destination?: string; type?: string; budget?: string; lat?: string; lng?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login?role=SEEKER");
   if (user.role !== "SEEKER") redirect("/");
 
   const sp = await searchParams;
+  // Real device GPS wins when the seeker has granted it (PRD GH-201) —
+  // manual micro-market stays as the fallback for denied/unavailable location.
+  const liveLat = sp.lat ? Number(sp.lat) : null;
+  const liveLng = sp.lng ? Number(sp.lng) : null;
+  const usingLiveLocation = liveLat != null && liveLng != null && !Number.isNaN(liveLat) && !Number.isNaN(liveLng);
+
   const destination = MICRO_MARKETS.find((m) => m.name === sp.destination) ?? MICRO_MARKETS[0];
+  const referencePoint = usingLiveLocation ? { lat: liveLat!, lng: liveLng! } : destination;
+  const referenceLabel = usingLiveLocation ? "Your current location" : destination.name;
   const typeFilter = sp.type && sp.type !== "ALL" ? (sp.type as InventoryType) : undefined;
   const budget = sp.budget ? Number(sp.budget) : undefined;
 
@@ -50,7 +59,7 @@ export default async function SeekerFeedPage({
       depositAmount: item.depositAmount,
       furnishing: item.furnishing,
       lastConfirmedAt: item.lastConfirmedAt.toISOString(),
-      distanceKm: haversineKm(destination, { lat: item.property.lat, lng: item.property.lng }),
+      distanceKm: haversineKm(referencePoint, { lat: item.property.lat, lng: item.property.lng }),
       property: { title: item.property.title, area: item.property.area },
       nextSlot: item.slots[0] ? { startTime: item.slots[0].startTime.toISOString() } : null,
       slotCount: item.slots.length,
@@ -71,15 +80,16 @@ export default async function SeekerFeedPage({
                 Hello {user.name.split(" ")[0]}! <span aria-hidden>👋</span>
               </p>
               <p className="flex items-center gap-1 text-lg font-bold text-white">
-                <span aria-hidden>📍</span> {destination.name}
+                <span aria-hidden>📍</span> {referenceLabel}
               </p>
+              <UseLocationButton active={usingLiveLocation} />
             </div>
           }
         >
           <FilterBar destination={destination.name} type={sp.type ?? "ALL"} budget={sp.budget ?? ""} />
         </FilterToggle>
       </div>
-      <SwipeDeck items={feed} destination={destination.name} />
+      <SwipeDeck items={feed} destination={referenceLabel} />
     </div>
   );
 }

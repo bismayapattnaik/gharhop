@@ -40,6 +40,10 @@ yarn-error.log*
 /prisma/dev.db
 /prisma/dev.db-journal
 
+# owner-uploaded photos (runtime user content — public/photos/* demo assets are
+# committed on purpose, this is the separate real-upload destination)
+/public/uploads
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

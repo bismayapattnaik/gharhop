@@ -129,11 +129,11 @@ model InventoryItem {
   bookingMode       BookingMode   @default(INSTANT)
   lastConfirmedAt   DateTime      @default(now())
   freshnessTtlHours Int           @default(72)
-  // JSON-encoded string[] of /photos/*.jpg paths. No real upload pipeline in
-  // the prototype (PRD GH-404 "media provenance" is P1) — demo photos are
-  // auto-assigned by inventory type at creation time, see src/lib/photos.ts.
+  // JSON-encoded string[] of photo paths — /photos/*.jpg demo assets until an
+  // owner uploads real ones under /uploads/<itemId>/*, see src/lib/photos.ts
+  // and src/app/api/items/[id]/photos/route.ts. No media provenance/
+  // verification pipeline (PRD GH-404 is P1).
   photos            String        @default("[]")
-  panoramaUrl       String?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 

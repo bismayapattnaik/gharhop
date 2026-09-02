@@ -56,7 +56,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             ←
           </Link>
           <div className="flex items-center gap-2">
-            {item.panoramaUrl && <Panorama360Trigger imageUrl={item.panoramaUrl} title={item.property.title} />}
+            <Panorama360Trigger images={photos} title={item.property.title} />
             <Badge tone="dark" status={status} label={status === "ACTIVE" ? freshnessAgeLabel(item.lastConfirmedAt) : undefined} />
           </div>
         </div>

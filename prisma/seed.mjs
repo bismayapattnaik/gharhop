@@ -13,13 +13,8 @@ const DEMO_PHOTOS = {
   ROOM: ["/photos/room-1.jpg", "/photos/room-2.jpg", "/photos/room-3.jpg", "/photos/room-4.jpg"],
   PG_BED: ["/photos/pgbed-1.jpg", "/photos/pgbed-2.jpg", "/photos/pgbed-3.jpg", "/photos/pgbed-4.jpg", "/photos/pgbed-5.jpg"],
 };
-const DEMO_PANORAMA = {
-  FLAT: "/photos/flat-3.jpg",
-  ROOM: "/photos/room-3.jpg",
-  PG_BED: "/photos/pgbed-1.jpg",
-};
 function demoMedia(type) {
-  return { photos: JSON.stringify(DEMO_PHOTOS[type]), panoramaUrl: DEMO_PANORAMA[type] };
+  return { photos: JSON.stringify(DEMO_PHOTOS[type]) };
 }
 
 function futureSlot(daysFromNow, hour) {

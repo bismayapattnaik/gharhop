@@ -8,7 +8,9 @@ import StatusControl from "@/components/owner/StatusControl";
 import NewSlotsForm from "@/components/owner/NewSlotsForm";
 import RespondButtons from "@/components/owner/RespondButtons";
 import BookingModeSelect from "@/components/owner/BookingModeSelect";
+import PhotoManager from "@/components/owner/PhotoManager";
 import { formatInr, formatDateTime, TYPE_LABEL } from "@/lib/format";
+import { parsePhotos } from "@/lib/photos";
 
 export default async function ManageItemPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -51,6 +53,14 @@ export default async function ManageItemPage({ params }: { params: Promise<{ id:
           <ReconfirmButton itemId={item.id} />
           <BookingModeSelect itemId={item.id} bookingMode={item.bookingMode} />
         </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
+        <h2 className="text-lg font-semibold text-slate-900">Photos &amp; room tour</h2>
+        <p className="mb-3 text-sm text-slate-500">
+          Seekers see these as a swipeable Room Tour with a drag-to-pan preview on the detail page.
+        </p>
+        <PhotoManager itemId={item.id} photos={parsePhotos(item.photos)} />
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-5">

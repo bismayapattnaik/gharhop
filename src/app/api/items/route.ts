@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { handleApiError } from "@/lib/api-helpers";
 import { ForbiddenError, NotFoundError } from "@/lib/errors";
-import { defaultPhotosFor, defaultPanoramaFor } from "@/lib/photos";
+import { defaultPhotosFor } from "@/lib/photos";
 import type { InventoryType } from "@prisma/client";
 
 // Adds another inventory item (room/bed/flat) under an owner's existing
@@ -30,7 +30,6 @@ export async function POST(request: Request) {
         availableFrom: availableFrom ? new Date(availableFrom) : new Date(),
         status: "DRAFT",
         photos: defaultPhotosFor(type as InventoryType),
-        panoramaUrl: defaultPanoramaFor(type as InventoryType),
       },
     });
     return NextResponse.json({ item });

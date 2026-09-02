@@ -44,10 +44,21 @@ Each card shows:
 **Why it matters:** a swipe here is *not* a match. It's just interest —
 exactly like liking a post. The real commitment happens at step 3.3.
 
-### 3.2 Filters
+### 3.2 Filters and real location
 Area, property type (flat / private room / PG bed), and max budget. Filters
 are a plain form — they work even if JavaScript fails to load, because
 finding a place to live shouldn't depend on your connection being perfect.
+There's also a **"Use my current location"** button that calls your device's
+real GPS through the browser's location API — distances shown are computed
+against your actual position, not a scraped or fake location. If you deny
+location access (or it fails), search never breaks — it just falls back to
+picking an area manually from the dropdown.
+
+**What this deliberately doesn't do:** show listings scraped from other
+rental sites (99acres, Magicbricks, NoBroker, etc.) to make the map feel
+fuller. That would violate those platforms' terms of service, and it's the
+opposite of GharHop's whole premise — the pitch is *fewer, verified listings*
+you can actually book, not a bigger pile of secondhand data nobody's confirmed.
 
 ### 3.3 Booking a visit — the actual product
 Open a listing, pick one of the owner's real open time slots, and the system
@@ -90,6 +101,15 @@ one or more **inventory items** under it — a flat is one item, but a PG
 building can have many rooms and many beds, each independently rentable.
 This mirrors how PG operators actually think about their business (a bed is
 the sellable unit, not the building).
+
+Every new listing starts with realistic stock demo photos so it never looks
+empty. From the listing management screen, an owner can **upload their own
+real photos** (JPEG/PNG/WebP, up to 8, 5MB each) — the first real upload
+replaces the demo set entirely, since there's no reason to keep showing
+stock photos once real ones exist. Seekers view whichever set is live
+through a **Room Tour**: step through the photos with a drag-to-pan effect
+on each, the honest version of "3D tour" this prototype can actually deliver
+(see section 7 for what a true 3D reconstruction would take).
 
 ### 4.2 The freshness system — the actual moat
 This is the single most important mechanic in the whole product, and it's
@@ -205,7 +225,8 @@ just sequenced after the core loop above is proven to work:
 | Time-based reminders ("visit in 1 hour") | Needs a background job scheduler; the notification center only fires on state changes today, not on a clock |
 | "Hop Tour" (bundling 2-4 confirmed visits into one efficient route) | A real differentiator, but only matters once there's enough density that seekers are booking multiple visits in one area |
 | Native mobile app | The current build is a responsive web app that behaves like a phone app (see below) — a real Flutter app is a much later investment |
-| Real property photos | No media upload pipeline yet — cards use color-graded placeholder art instead |
+| True 3D/photogrammetry room reconstruction | Building an actual explorable 3D model from 2D photos (Matterport-style) is a hard ML/capture problem, not a UI feature — the Room Tour (drag-to-pan across an owner's real photos) is the honest stand-in |
+| Object storage for uploaded photos | Owner uploads currently land on local disk (`public/uploads/`) — fine for a prototype, needs S3-compatible storage before production |
 
 ---
 
