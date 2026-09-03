@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import LogoutButton from "@/components/LogoutButton";
 import NotificationBell from "@/components/NotificationBell";
+import MobileNavMenu from "@/components/MobileNavMenu";
 
 const LINKS: Record<string, { href: string; label: string }[]> = {
   SEEKER: [
@@ -34,10 +35,12 @@ export default async function TopNav() {
             Swipe nearby. Match a visit. Move in.
           </span>
         </Link>
-        <nav className={`flex items-center gap-4 text-sm font-medium ${dark ? "text-neutral-400" : "text-slate-600"}`}>
+        <nav className={`flex items-center gap-3 text-sm font-medium sm:gap-4 ${dark ? "text-neutral-400" : "text-slate-600"}`}>
           {user && (
-            // Seekers get a bottom tab bar on mobile instead — avoid double nav.
-            <span className={user.role === "SEEKER" ? "hidden items-center gap-4 sm:flex" : "flex items-center gap-4"}>
+            // Below `sm`, links move into MobileNavMenu (owner/admin) or the
+            // seeker's bottom tab bar — either way, they never sit inline
+            // next to the logo on a narrow screen.
+            <span className="hidden items-center gap-4 sm:flex">
               {LINKS[user.role]?.map((link) => (
                 <Link key={link.href} href={link.href} className={dark ? "hover:text-orange-400" : "hover:text-teal-700"}>
                   {link.label}
@@ -45,8 +48,9 @@ export default async function TopNav() {
               ))}
             </span>
           )}
+          {user && user.role !== "SEEKER" && <MobileNavMenu links={LINKS[user.role] ?? []} dark={dark} />}
           {user ? (
-            <div className={`flex items-center gap-3 border-l pl-4 ${dark ? "border-neutral-800" : "border-slate-200"}`}>
+            <div className={`flex items-center gap-2 border-l pl-3 sm:gap-3 sm:pl-4 ${dark ? "border-neutral-800" : "border-slate-200"}`}>
               <NotificationBell dark={dark} />
               <span className={`hidden sm:inline ${dark ? "text-neutral-400" : "text-slate-500"}`}>
                 {user.name} <span className={`text-xs uppercase ${dark ? "text-neutral-600" : "text-slate-400"}`}>· {user.role}</span>
