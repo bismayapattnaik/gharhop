@@ -49,6 +49,20 @@ export default async function SeekerFeedPage({
     },
   });
 
+  // FastFill owners (business plan section 5: "higher placement among
+  // equally relevant properties") get a small ranking boost and a badge —
+  // never enough to bury a much closer/fresher listing, just a nudge.
+  const ownerIds = [...new Set(items.map((i) => i.property.ownerId))];
+  const fastFillOwnerIds = new Set(
+    (
+      await prisma.subscription.findMany({
+        where: { userId: { in: ownerIds }, plan: "OWNER_FASTFILL", status: "ACTIVE", endAt: { gt: new Date() } },
+        select: { userId: true },
+      })
+    ).map((s) => s.userId)
+  );
+  const FASTFILL_BOOST_KM = 0.5;
+
   const feed: FeedItem[] = items
     .filter(isDiscoverable)
     .map((item) => ({
@@ -64,8 +78,12 @@ export default async function SeekerFeedPage({
       nextSlot: item.slots[0] ? { startTime: item.slots[0].startTime.toISOString() } : null,
       slotCount: item.slots.length,
       coverPhoto: parsePhotos(item.photos)[0] ?? null,
+      featured: fastFillOwnerIds.has(item.property.ownerId),
     }))
-    .sort((a, b) => a.distanceKm - b.distanceKm);
+    .sort((a, b) => {
+      const sortKey = (i: { distanceKm: number; featured: boolean }) => i.distanceKm - (i.featured ? FASTFILL_BOOST_KM : 0);
+      return sortKey(a) - sortKey(b);
+    });
 
   const hasActiveFilters = Boolean(sp.type && sp.type !== "ALL") || Boolean(sp.budget);
 

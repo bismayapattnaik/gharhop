@@ -230,7 +230,57 @@ from silently breaking in ways that would destroy trust:
 
 ---
 
-## 7. What's deliberately *not* built yet, and why
+## 7. Monetization (Phase 1 slice)
+
+The full monetization strategy is a multi-year business plan (marketplace →
+operator SaaS → transaction platform → enterprise). This prototype builds
+only its **Phase 1 slice** (months 0–6: "prove that GharHop creates
+completed visits and move-ins"), and — like auth — mocks the money movement
+rather than integrating a real payment gateway. Every purchase still creates
+a real `Order`, and every credit change is a real `CreditLedgerEntry`, not a
+bare balance bump (`src/lib/billing.ts`).
+
+**The rolling visit-access model.** Slots 7+ days out are always free to
+book. Slots within the next 7 days need priority access — a Rush Credit, an
+active MoveNow/Concierge pass, or the listing's owner-sponsored-visit offer.
+An unfilled slot within 24 hours is released free to everyone regardless,
+so inventory never sits empty just because nobody paid. The seeker's slot
+picker labels every slot with what it'll cost *before* they tap it
+(`components/seeker/SlotPicker.tsx`), and the server re-checks and enforces
+the same rule inside the same transaction that holds the slot
+(`createHold` in `src/lib/scheduling.ts`) — so it can't be raced.
+
+**Rush Credit** (₹149, one priority request) is reserved when a hold is
+created, not spent yet — it's restored automatically if the owner declines,
+never responds, cancels, or no-shows, and only actually consumed once the
+visit completes or the seeker is the one who cancels/no-shows. New seekers
+get one free on signup.
+
+**MoveNow Pass / Plus / Concierge** are time-boxed subscriptions
+(`Subscription` model) that grant unlimited priority booking for their
+duration, a higher active-visit-request cap, and a bundle of Rush Credits
+as a fallback once the pass expires.
+
+**Owner plans.** List Free caps an owner at one active/in-review listing
+and charges a move-in fee (tiered by PG bed / room / flat) once a tenancy
+is verified. FastFill (₹999/30 days) raises the cap to two listings, waives
+the move-in fee, and gives a small ranking boost in the seeker feed (shown
+as a "⚡ Featured" badge) — never enough to bury a closer or fresher
+listing. Owners can also toggle **owner-sponsored visits** per listing,
+letting seekers book within-the-week slots for free; GharHop only charges
+the owner (₹99) once they actually confirm the resulting visit, never for
+a decline, cancellation, or expired request.
+
+**What's still explicitly mocked:** no real payment gateway, no real
+invoicing/GST, no fraud/coupon-abuse controls, no lending/insurance
+partnerships (business plan sections 12–13) — those need licensed
+financial partners and are out of scope for a prototype. See
+`src/lib/billing.ts` for the full catalog of plans/prices and
+`/seeker/plans` and `/owner/plans` for the purchase UI.
+
+---
+
+## 8. What's deliberately *not* built yet, and why
 
 Every one of these is a real feature in the long-term product vision — they're
 just sequenced after the core loop above is proven to work:
@@ -238,7 +288,8 @@ just sequenced after the core loop above is proven to work:
 | Not yet built | Why it's sequenced later |
 |---|---|
 | Real OTP/SMS login | Needs a paid SMS/DLT provider contract — not worth it before there's a real user base |
-| Payments, deposits, escrow | Legally needs a regulated payment partner; the product explicitly should never custody money itself |
+| A real payment gateway | Phase 1 monetization (section 7) is mocked the same way auth is — real money movement legally needs a regulated payment partner |
+| Deposit escrow, rent collection, lending/insurance | Legally needs regulated financial partners; the product explicitly should never custody money itself (business plan sections 6, 12) |
 | Identity/KYC verification | Needs a verification provider contract + legal review |
 | Masked calling | Needs a telephony provider |
 | Time-based reminders ("visit in 1 hour") | Needs a background job scheduler; the notification center only fires on state changes today, not on a clock |
@@ -249,7 +300,7 @@ just sequenced after the core loop above is proven to work:
 
 ---
 
-## 8. Why the app looks like a dating app
+## 9. Why the app looks like a dating app
 
 The swipe-card interaction is deliberately styled like a modern dating app
 (dark background, warm gradient accents, floating action buttons, drag-to-swipe
@@ -263,7 +314,7 @@ work tools, not something anyone should enjoy scrolling through.
 
 ---
 
-## 9. The single metric that matters most
+## 10. The single metric that matters most
 
 Everything above serves one number: **verified move-ins.** Not swipes, not
 listings, not app downloads — completed, confirmed, actually-happened visits

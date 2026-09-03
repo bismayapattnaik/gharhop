@@ -10,11 +10,43 @@ interface Slot {
   endTime: string;
 }
 
-export default function SlotPicker({ bookingMode, slots }: { bookingMode: string; slots: Slot[] }) {
+// Client-side mirror of the rolling visit-access rule in lib/billing.ts —
+// informational only (labels what a slot will cost); the server re-checks
+// and enforces it for real inside createHold.
+function accessLabel(
+  startTime: string,
+  opts: { freeWindowDays: number; lastMinuteHours: number; hasPriorityPass: boolean; sponsoredVisitEnabled: boolean; walletBalance: number }
+) {
+  const hoursUntil = (new Date(startTime).getTime() - Date.now()) / (60 * 60 * 1000);
+  if (hoursUntil / 24 >= opts.freeWindowDays) return { text: "Free", tone: "free" as const };
+  if (hoursUntil <= opts.lastMinuteHours) return { text: "Free · last-minute release", tone: "free" as const };
+  if (opts.hasPriorityPass) return { text: "Included in your plan", tone: "plan" as const };
+  if (opts.sponsoredVisitEnabled) return { text: "Free · sponsored by owner", tone: "free" as const };
+  return { text: opts.walletBalance > 0 ? "Uses 1 Rush Credit" : "Needs a Rush Credit", tone: "credit" as const };
+}
+
+export default function SlotPicker({
+  bookingMode,
+  slots,
+  freeWindowDays,
+  lastMinuteHours,
+  hasPriorityPass,
+  sponsoredVisitEnabled,
+  walletBalance,
+}: {
+  bookingMode: string;
+  slots: Slot[];
+  freeWindowDays: number;
+  lastMinuteHours: number;
+  hasPriorityPass: boolean;
+  sponsoredVisitEnabled: boolean;
+  walletBalance: number;
+}) {
   const router = useRouter();
   const [selected, setSelected] = useState<Slot | null>(null);
   const [hold, setHold] = useState<{ id: string; expiresAt: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsUpgrade, setNeedsUpgrade] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [remaining, setRemaining] = useState(0);
@@ -29,6 +61,7 @@ export default function SlotPicker({ bookingMode, slots }: { bookingMode: string
 
   async function requestSlot(slot: Slot) {
     setError(null);
+    setNeedsUpgrade(false);
     setLoading(true);
     setSelected(slot);
     try {
@@ -40,6 +73,7 @@ export default function SlotPicker({ bookingMode, slots }: { bookingMode: string
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Could not hold this slot.");
+        setNeedsUpgrade(res.status === 402);
         setSelected(null);
         router.refresh();
         return;
@@ -100,21 +134,43 @@ export default function SlotPicker({ bookingMode, slots }: { bookingMode: string
   return (
     <div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {slots.map((slot) => (
-          <button
-            key={slot.id}
-            disabled={loading}
-            onClick={() => requestSlot(slot)}
-            className={`rounded-lg border px-3 py-2 text-left text-sm text-neutral-200 ${
-              selected?.id === slot.id ? "border-orange-500 bg-orange-500/10" : "border-neutral-700 hover:border-orange-500/50"
-            }`}
-          >
-            {formatDateTime(slot.startTime)}
-          </button>
-        ))}
+        {slots.map((slot) => {
+          const access = accessLabel(slot.startTime, { freeWindowDays, lastMinuteHours, hasPriorityPass, sponsoredVisitEnabled, walletBalance });
+          return (
+            <button
+              key={slot.id}
+              disabled={loading}
+              onClick={() => requestSlot(slot)}
+              className={`rounded-lg border px-3 py-2 text-left text-sm text-neutral-200 ${
+                selected?.id === slot.id ? "border-orange-500 bg-orange-500/10" : "border-neutral-700 hover:border-orange-500/50"
+              }`}
+            >
+              <span className="block">{formatDateTime(slot.startTime)}</span>
+              <span
+                className={`mt-0.5 block text-xs ${
+                  access.tone === "free" ? "text-emerald-400" : access.tone === "plan" ? "text-blue-400" : "text-amber-400"
+                }`}
+              >
+                {access.text}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+      {error && (
+        <p className="mt-3 text-sm text-red-400">
+          {error}
+          {needsUpgrade && (
+            <>
+              {" "}
+              <a href="/seeker/plans" className="underline">
+                See plans →
+              </a>
+            </>
+          )}
+        </p>
+      )}
 
       {hold && (
         <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">

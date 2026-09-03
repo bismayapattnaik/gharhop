@@ -28,12 +28,20 @@ Open http://localhost:3000.
 
 | Role   | Phone        | Notes |
 |--------|--------------|-------|
-| Owner  | 9800000001   | Priya, PG operator — DLF Cyber City. Has one intentionally stale bed to demo freshness enforcement. |
-| Owner  | 9800000002   | Mr. Rao — Golf Course Road flat (approval-required booking) + Sohna Road room (instant booking). |
+| Owner  | 9800000001   | Priya, PG operator — DLF Cyber City. Has one intentionally stale bed to demo freshness enforcement, plus a seeded active FastFill subscription. |
+| Owner  | 9800000002   | Mr. Rao — Golf Course Road flat (approval-required booking) + Sohna Road room (instant booking, seeded with owner-sponsored visits on). |
 | Admin  | 0000000000   | Ops console. |
 | Seeker | *any number* | First login with a new number creates the account. |
 
 ## What's actually implemented (the hard part)
+
+- **Phase 1 monetization** — the rolling visit-access model (7-day free
+  window, Rush Credit, MoveNow Pass/Plus/Concierge, owner FastFill/Success
+  plans, owner-sponsored visits, verified move-in fees), all backed by real
+  `Order`/`Subscription`/`CreditWallet`/`CreditLedgerEntry` rows rather than
+  a hardcoded `isPremium` flag — see FEATURES.md section 7 and
+  `src/lib/billing.ts`. Payments are mocked, same spirit as the mock OTP
+  login below.
 
 - **Freshness TTL** — a listing's `ACTIVE`/`STALE` state is *derived* at read
   time from `lastConfirmedAt`, not stored — so a missed reconfirmation always
@@ -106,10 +114,14 @@ Open http://localhost:3000.
   moving off the prototype.
 - **No mobile app** — this is a responsive web app covering both the seeker
   and owner experience, not the Flutter app from the technical blueprint.
-- **No payments, escrow, KYC/identity verification, masked calling, or
-  Hop Tour routing** — all P1/P2 in the PRD, and all require third-party
-  provider contracts that don't make sense to wire up before the core loop
-  is validated.
+- **No real payment gateway, escrow, KYC/identity verification, masked
+  calling, or Hop Tour routing** — all P1/P2 in the PRD, and all require
+  third-party provider contracts that don't make sense to wire up before
+  the core loop is validated. Phase 1 monetization (Rush Credit, MoveNow
+  passes, owner FastFill/Success plans, owner-sponsored visits — see
+  FEATURES.md section 7) *is* built, but payments are mocked the same way
+  auth is mocked: every purchase is a real `Order` + ledger entry
+  (`src/lib/billing.ts`), just with no real money moving.
 - **No background jobs** — slot-hold expiry is checked lazily on read
   (`releaseIfExpired` in `scheduling.ts`) rather than via a cron worker.
   Fine for a prototype; replace with a real queue before production.

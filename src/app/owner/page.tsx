@@ -7,6 +7,7 @@ import Badge from "@/components/Badge";
 import ReconfirmButton from "@/components/owner/ReconfirmButton";
 import StatusControl from "@/components/owner/StatusControl";
 import { formatInr, TYPE_LABEL } from "@/lib/format";
+import { ownerEntitlements } from "@/lib/billing";
 
 export default async function OwnerDashboardPage() {
   const user = await getCurrentUser();
@@ -20,6 +21,8 @@ export default async function OwnerDashboardPage() {
   });
 
   const staleCount = properties.flatMap((p) => p.items).filter((i) => derivedStatus(i) === "STALE").length;
+  const activeCount = properties.flatMap((p) => p.items).filter((i) => ["ACTIVE", "PENDING_VERIFICATION"].includes(i.status)).length;
+  const entitlements = await ownerEntitlements(user.id);
 
   return (
     <div>
@@ -38,6 +41,14 @@ export default async function OwnerDashboardPage() {
           + Add property
         </Link>
       </div>
+
+      <p className="mb-4 rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-500">
+        {activeCount}/{entitlements.maxActiveListings} active listing{entitlements.maxActiveListings === 1 ? "" : "s"} used
+        {entitlements.hasFastFill ? " · FastFill active" : ""} ·{" "}
+        <Link href="/owner/plans" className="text-teal-700 underline">
+          Manage plan
+        </Link>
+      </p>
 
       {properties.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">

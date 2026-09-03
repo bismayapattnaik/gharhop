@@ -12,6 +12,7 @@ import { TYPE_EMOJI } from "@/lib/visual";
 import { parsePhotos } from "@/lib/photos";
 import PhotoGallery from "@/components/PhotoGallery";
 import Panorama360Trigger from "@/components/Panorama360Trigger";
+import { FREE_WINDOW_DAYS, LAST_MINUTE_RELEASE_HOURS, renterEntitlements } from "@/lib/billing";
 
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -32,6 +33,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const interest = await prisma.interest.findUnique({
     where: { seekerId_inventoryItemId: { seekerId: user.id, inventoryItemId: item.id } },
   });
+  const entitlements = await renterEntitlements(user.id);
 
   const status = derivedStatus(item);
   const photos = parsePhotos(item.photos);
@@ -118,6 +120,11 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             <SlotPicker
               bookingMode={item.bookingMode}
               slots={item.slots.map((s) => ({ id: s.id, startTime: s.startTime.toISOString(), endTime: s.endTime.toISOString() }))}
+              freeWindowDays={FREE_WINDOW_DAYS}
+              lastMinuteHours={LAST_MINUTE_RELEASE_HOURS}
+              hasPriorityPass={entitlements.hasPriorityPass}
+              sponsoredVisitEnabled={item.sponsoredVisitEnabled}
+              walletBalance={entitlements.wallet.balance}
             />
           ) : (
             <p className="rounded-lg bg-red-500/10 p-4 text-sm text-red-400">

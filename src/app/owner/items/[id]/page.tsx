@@ -10,8 +10,11 @@ import RespondButtons from "@/components/owner/RespondButtons";
 import BookingModeSelect from "@/components/owner/BookingModeSelect";
 import PhotoManager from "@/components/owner/PhotoManager";
 import RoomManager from "@/components/owner/RoomManager";
+import SponsorToggle from "@/components/owner/SponsorToggle";
+import VerifyMoveInButton from "@/components/owner/VerifyMoveInButton";
 import { formatInr, formatDateTime, TYPE_LABEL } from "@/lib/format";
 import { parsePhotos } from "@/lib/photos";
+import { ownerEntitlements, SPONSORED_VISIT_FEE_INR } from "@/lib/billing";
 
 export default async function ManageItemPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -31,6 +34,7 @@ export default async function ManageItemPage({ params }: { params: Promise<{ id:
   if (!item || item.property.ownerId !== user.id) notFound();
 
   const status = derivedStatus(item);
+  const owner = await ownerEntitlements(user.id);
   const openSlots = item.slots
     .filter((s) => s.status === "OPEN")
     .map((s) => ({ id: s.id, startTime: s.startTime.toISOString() }));
@@ -63,6 +67,23 @@ export default async function ManageItemPage({ params }: { params: Promise<{ id:
           )}
           <BookingModeSelect itemId={item.id} bookingMode={item.bookingMode} />
         </div>
+        {item.status === "ACTIVE" && (
+          <div className="mt-3">
+            <SponsorToggle itemId={item.id} enabled={item.sponsoredVisitEnabled} feeInr={SPONSORED_VISIT_FEE_INR} />
+          </div>
+        )}
+        {item.status === "RENTED" && (
+          <div className="mt-3">
+            {item.moveInVerifiedAt ? (
+              <p className="text-xs text-emerald-600">
+                Verified move-in on {item.moveInVerifiedAt.toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                {owner.moveInFeeApplies && " — move-in fee charged"}.
+              </p>
+            ) : (
+              <VerifyMoveInButton itemId={item.id} feeApplies={owner.moveInFeeApplies} />
+            )}
+          </div>
+        )}
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-5">

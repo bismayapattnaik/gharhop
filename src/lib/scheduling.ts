@@ -2,6 +2,14 @@ import { prisma } from "@/lib/prisma";
 import { ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { notify } from "@/lib/notifications";
 import { formatDateTime } from "@/lib/format";
+import {
+  applyPriorityGate,
+  chargeSponsoredVisit,
+  consumeReservedCredit,
+  refundSponsoredVisitIfCharged,
+  renterEntitlements,
+  restoreReservedCredit,
+} from "@/lib/billing";
 import type { VisitOutcome } from "@prisma/client";
 
 // The load-bearing mechanic from PRD section 7.E ("Slot matching algorithm")
@@ -28,10 +36,15 @@ async function releaseIfExpired(slotId: string) {
     return;
   }
   if (activeHold.expiresAt.getTime() < Date.now()) {
-    await prisma.$transaction([
-      prisma.slotHold.update({ where: { id: activeHold.id }, data: { status: "EXPIRED" } }),
-      prisma.availabilitySlot.update({ where: { id: slotId }, data: { status: "OPEN" } }),
-    ]);
+    await prisma.$transaction(async (tx) => {
+      await tx.slotHold.update({ where: { id: activeHold.id }, data: { status: "EXPIRED" } });
+      await tx.availabilitySlot.update({ where: { id: slotId }, data: { status: "OPEN" } });
+      // A Rush Credit reserved for this hold is restored, never lost, since
+      // the seeker never got a chance to confirm (business plan section 3).
+      if (activeHold.creditReserved) {
+        await restoreReservedCredit(tx, activeHold.seekerId, { holdId: activeHold.id, reason: "Hold expired before confirmation" });
+      }
+    });
   }
 }
 
@@ -42,10 +55,23 @@ export async function createHold(params: { slotId: string; seekerId: string; ide
   await releaseIfExpired(params.slotId);
 
   return prisma.$transaction(async (tx) => {
-    const slot = await tx.availabilitySlot.findUnique({ where: { id: params.slotId } });
+    const slot = await tx.availabilitySlot.findUnique({ where: { id: params.slotId }, include: { inventoryItem: true } });
     if (!slot) throw new NotFoundError("Slot not found");
     if (slot.status !== "OPEN" || slot.bookedCount >= slot.capacity) {
       throw new ConflictError("This slot is no longer available — pick another time.");
+    }
+
+    // Rolling visit-access model (business plan section 2): free 3+ active
+    // requests is a Free-plan seeker's cap regardless of which slots those
+    // requests are for.
+    const entitlements = await renterEntitlements(params.seekerId);
+    const activeVisitCount = await tx.visit.count({
+      where: { seekerId: params.seekerId, status: { in: ["REQUESTED", "CONFIRMED", "CHECKED_IN"] } },
+    });
+    if (activeVisitCount >= entitlements.maxActiveVisits) {
+      throw new ConflictError(
+        `You've reached your limit of ${entitlements.maxActiveVisits} active visit requests — cancel one or upgrade your plan.`
+      );
     }
 
     const hold = await tx.slotHold.create({
@@ -58,6 +84,19 @@ export async function createHold(params: { slotId: string; seekerId: string; ide
       },
     });
     await tx.availabilitySlot.update({ where: { id: params.slotId }, data: { status: "HELD" } });
+
+    // Decide (and, if it costs a Rush Credit, reserve) how this seeker gets
+    // priority access to a within-the-week slot. Throwing here rolls back
+    // the hold/slot changes above too, since it's the same transaction.
+    const gate = await applyPriorityGate(tx, {
+      seekerId: params.seekerId,
+      slotStartTime: slot.startTime,
+      item: slot.inventoryItem,
+      holdId: hold.id,
+    });
+    if (gate.creditReserved || gate.sponsoredByOwner) {
+      return tx.slotHold.update({ where: { id: hold.id }, data: gate });
+    }
     return hold;
   });
 }
@@ -94,6 +133,8 @@ export async function confirmVisitFromHold(params: { holdId: string; seekerId: s
         bookingMode: item.bookingMode,
         scheduledStart: slot.startTime,
         scheduledEnd: slot.endTime,
+        creditReserved: hold.creditReserved,
+        sponsoredByOwner: hold.sponsoredByOwner,
       },
     });
 
@@ -111,6 +152,11 @@ export async function confirmVisitFromHold(params: { holdId: string; seekerId: s
     if (result.instant) {
       await notify(result.visit.seekerId, "VISIT_CONFIRMED", `Your visit to ${result.propertyTitle} on ${when} is confirmed.`, "/seeker/visits");
       await notify(result.ownerId!, "VISIT_CONFIRMED", `New confirmed visit for ${result.propertyTitle} on ${when}.`, "/owner/requests");
+      // Instant confirm on a sponsored listing *is* the owner's calendar
+      // accepting — charge here, same as the approval-flow accept path.
+      if (result.visit.sponsoredByOwner) {
+        await chargeSponsoredVisit(result.ownerId!, result.visit.id);
+      }
     } else {
       await notify(result.ownerId!, "VISIT_REQUESTED", `New visit request for ${result.propertyTitle} on ${when}.`, "/owner/requests");
     }
@@ -132,13 +178,28 @@ export async function ownerRespond(params: { visitId: string; actorId: string; a
     } else {
       await tx.visit.update({ where: { id: visit.id }, data: { status: "CANCELLED_BY_HOST", cancelReason: "Owner declined the request" } });
       await tx.availabilitySlot.update({ where: { id: visit.slotId }, data: { status: "OPEN" } });
+      // Owner-caused failure — never charge the seeker's Rush Credit for it.
+      if (visit.creditReserved) {
+        await restoreReservedCredit(tx, visit.seekerId, { visitId: visit.id, reason: "Owner declined the request" });
+      }
     }
-    return { visit: await tx.visit.findUnique({ where: { id: visit.id } }), seekerId: visit.seekerId, propertyTitle: visit.inventoryItem.property.title };
+    return {
+      visit: await tx.visit.findUnique({ where: { id: visit.id } }),
+      seekerId: visit.seekerId,
+      ownerId: visit.inventoryItem.property.ownerId,
+      propertyTitle: visit.inventoryItem.property.title,
+      sponsoredByOwner: visit.sponsoredByOwner,
+    };
   });
 
   const when = formatDateTime(result.visit!.scheduledStart);
   if (params.action === "accept") {
     await notify(result.seekerId, "VISIT_CONFIRMED", `${result.propertyTitle} confirmed your visit for ${when}.`, "/seeker/visits");
+    // Owner accepting an approval-required visit *is* the confirmation the
+    // sponsored-visit fee waits on (business plan section 9).
+    if (result.sponsoredByOwner) {
+      await chargeSponsoredVisit(result.ownerId, result.visit!.id);
+    }
   } else {
     await notify(result.seekerId, "VISIT_DECLINED", `${result.propertyTitle} declined your visit request for ${when}.`, "/seeker/visits");
   }
@@ -167,6 +228,18 @@ export async function cancelVisit(params: { visitId: string; actorRole: "seeker"
 
     if (params.actorRole === "seeker") {
       await tx.user.update({ where: { id: visit.seekerId }, data: { reliabilityScore: { decrement: 5 } } });
+      // Seeker-caused cancellation — the Rush Credit paid for priority
+      // coordination that did happen, so it's spent, not refunded.
+      if (visit.creditReserved) {
+        await consumeReservedCredit(tx, visit.seekerId, { visitId: visit.id, reason: "Seeker cancelled a priority visit" });
+      }
+    } else {
+      if (visit.creditReserved) {
+        await restoreReservedCredit(tx, visit.seekerId, { visitId: visit.id, reason: "Owner cancelled the visit" });
+      }
+      if (visit.sponsoredByOwner) {
+        await refundSponsoredVisitIfCharged(tx, visit.id);
+      }
     }
     return {
       visit: await tx.visit.findUnique({ where: { id: visit.id } }),
@@ -197,7 +270,13 @@ export async function completeVisit(visitId: string) {
   if (visit.status !== "CHECKED_IN" && visit.status !== "CONFIRMED") {
     throw new ConflictError("Visit must be checked in before it can be completed.");
   }
-  return prisma.visit.update({ where: { id: visitId }, data: { status: "COMPLETED", completedAt: new Date() } });
+  return prisma.$transaction(async (tx) => {
+    // The priority visit happened — the Rush Credit paid for exactly this.
+    if (visit.creditReserved) {
+      await consumeReservedCredit(tx, visit.seekerId, { visitId: visit.id, reason: "Priority visit completed" });
+    }
+    return tx.visit.update({ where: { id: visitId }, data: { status: "COMPLETED", completedAt: new Date() } });
+  });
 }
 
 export async function markNoShow(visitId: string, who: "seeker" | "host") {
@@ -211,6 +290,16 @@ export async function markNoShow(visitId: string, who: "seeker" | "host") {
     await tx.availabilitySlot.update({ where: { id: visit.slotId }, data: { status: "OPEN", bookedCount: { decrement: 1 } } });
     if (who === "seeker") {
       await tx.user.update({ where: { id: visit.seekerId }, data: { reliabilityScore: { decrement: 15 } } });
+      if (visit.creditReserved) {
+        await consumeReservedCredit(tx, visit.seekerId, { visitId: visit.id, reason: "Seeker no-show on a priority visit" });
+      }
+    } else {
+      if (visit.creditReserved) {
+        await restoreReservedCredit(tx, visit.seekerId, { visitId: visit.id, reason: "Owner no-show" });
+      }
+      if (visit.sponsoredByOwner) {
+        await refundSponsoredVisitIfCharged(tx, visit.id);
+      }
     }
   });
 }

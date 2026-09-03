@@ -90,6 +90,106 @@ enum ReportStatus {
   CLOSED
 }
 
+// --- Monetization (business-plan Phase 1 slice: rolling visit-access
+// model + Rush Credit + MoveNow passes + owner FastFill/Success plans) ---
+// Payments are mocked the same way auth is mocked (see lib/auth.ts) — no
+// real gateway integration, but every balance change is still recorded as
+// a ledger entry rather than a bare counter, per the business plan's own
+// "never update only a numerical balance" rule.
+
+enum SubscriptionPlan {
+  MOVE_NOW_PASS
+  MOVE_NOW_PLUS
+  CONCIERGE
+  OWNER_FASTFILL
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model Subscription {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id])
+  plan      SubscriptionPlan
+  status    SubscriptionStatus @default(ACTIVE)
+  startAt   DateTime           @default(now())
+  endAt     DateTime
+  priceInr  Int
+  createdAt DateTime           @default(now())
+
+  orders Order[]
+}
+
+model CreditWallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  // Spendable Rush Credits and credits currently held against a pending
+  // priority request — kept as fast-read columns, always updated in the
+  // same transaction as the ledger entry below that explains the change.
+  balance   Int      @default(0)
+  reserved  Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  entries CreditLedgerEntry[]
+}
+
+enum CreditLedgerType {
+  GRANTED
+  PURCHASED
+  RESERVED
+  CONSUMED
+  RESTORED
+  EXPIRED
+  REFUNDED
+}
+
+model CreditLedgerEntry {
+  id        String           @id @default(cuid())
+  walletId  String
+  wallet    CreditWallet     @relation(fields: [walletId], references: [id])
+  type      CreditLedgerType
+  amount    Int
+  reason    String?
+  holdId    String?
+  visitId   String?
+  createdAt DateTime         @default(now())
+}
+
+enum OrderType {
+  RUSH_CREDIT_PACK
+  MOVE_NOW_PASS
+  MOVE_NOW_PLUS
+  CONCIERGE
+  OWNER_FASTFILL
+  OWNER_SPONSORED_VISIT
+  OWNER_VERIFIED_MOVE_IN_FEE
+}
+
+enum OrderStatus {
+  SUCCEEDED
+  REFUNDED
+  FAILED
+}
+
+model Order {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  type           OrderType
+  amountInr      Int
+  status         OrderStatus   @default(SUCCEEDED)
+  subscriptionId String?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+  visitId        String?
+  metadata       String?
+  createdAt      DateTime      @default(now())
+}
+
 model User {
   id               String   @id @default(cuid())
   phone            String   @unique
@@ -103,6 +203,9 @@ model User {
   visitsAsSeeker Visit[]         @relation("SeekerVisits")
   reportsFiled   TrustReport[]   @relation("Reporter")
   notifications  Notification[]
+  wallet         CreditWallet?
+  subscriptions  Subscription[]
+  orders         Order[]
 }
 
 model Property {
@@ -142,6 +245,15 @@ model InventoryItem {
   rejectionReason   String?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
+
+  // Owner-sponsored premium visits (business plan section 9): when true,
+  // a seeker can book this item's within-the-week slots for free; GharHop
+  // charges the owner only once they actually confirm the resulting visit.
+  sponsoredVisitEnabled Boolean   @default(false)
+  // Set once a completed tenancy on this unit is verified (business plan
+  // section 4 "verifying a move-in") — triggers the owner's move-in fee
+  // unless they hold an active FastFill subscription.
+  moveInVerifiedAt      DateTime?
 
   slots     AvailabilitySlot[]
   interests Interest[]
@@ -194,6 +306,13 @@ model SlotHold {
   idempotencyKey String     @unique
   expiresAt      DateTime
   status         HoldStatus @default(ACTIVE)
+  // True when this hold consumed a Rush Credit reservation to get priority
+  // access to a within-the-week slot — tracked here so the credit can be
+  // restored/consumed correctly once the hold resolves (see lib/billing.ts).
+  creditReserved Boolean    @default(false)
+  // True when this hold used the listing's owner-sponsored-visit offer
+  // instead of a Rush Credit — carried onto the Visit at confirm time.
+  sponsoredByOwner Boolean  @default(false)
   createdAt      DateTime   @default(now())
 }
 
@@ -232,6 +351,12 @@ model Visit {
   // now waiting on the seeker to accept/decline it (PRD "counter-proposal"
   // booking mode) — same REQUESTED status, opposite direction of who's waiting.
   proposedByOwner Boolean       @default(false)
+  // Carried over from SlotHold.creditReserved at confirmation time — lets
+  // cancel/no-show/complete settle the Rush Credit ledger correctly.
+  creditReserved  Boolean       @default(false)
+  // True when this visit used the owner's sponsored-visit offer instead of
+  // the seeker's own credit/subscription — charged to the owner on accept.
+  sponsoredByOwner Boolean      @default(false)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 }

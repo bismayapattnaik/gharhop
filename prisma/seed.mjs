@@ -35,6 +35,10 @@ async function main() {
   await prisma.room.deleteMany();
   await prisma.inventoryItem.deleteMany();
   await prisma.property.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.creditLedgerEntry.deleteMany();
+  await prisma.subscription.deleteMany();
+  await prisma.creditWallet.deleteMany();
   await prisma.user.deleteMany();
 
   await prisma.user.create({ data: { phone: "0000000000", name: "GharHop Ops", role: "ADMIN" } });
@@ -133,6 +137,9 @@ async function main() {
             status: "ACTIVE",
             bookingMode: "INSTANT",
             lastConfirmedAt: new Date(),
+            // Demoes the owner-sponsored-visit toggle (business plan section 9):
+            // within-the-week slots on this room are free for seekers to book.
+            sponsoredVisitEnabled: true,
             ...demoMedia("ROOM"),
           },
         ],
@@ -178,6 +185,21 @@ async function main() {
       })),
     });
   }
+
+  // Demoes owner monetization (business plan section 5): Priya has an
+  // active FastFill subscription, so her listings show "⚡ Featured" in
+  // the seeker feed and skip the verified-move-in fee.
+  const fastFillSubscription = await prisma.subscription.create({
+    data: {
+      userId: priya.id,
+      plan: "OWNER_FASTFILL",
+      endAt: new Date(Date.now() + 30 * 24 * HOUR),
+      priceInr: 999,
+    },
+  });
+  await prisma.order.create({
+    data: { userId: priya.id, type: "OWNER_FASTFILL", amountInr: 999, subscriptionId: fastFillSubscription.id },
+  });
 
   console.log("Seed complete:");
   console.log("- Admin login: phone 0000000000, role ADMIN");

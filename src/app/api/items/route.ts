@@ -7,7 +7,10 @@ import { defaultPhotosFor } from "@/lib/photos";
 import type { InventoryType } from "@prisma/client";
 
 // Adds another inventory item (room/bed/flat) under an owner's existing
-// property — the PG bed/room hierarchy from PRD section 8.B.
+// property — the PG bed/room hierarchy from PRD section 8.B. A new item
+// always starts as an unpublished DRAFT, so the owner plan's active-
+// listing cap (business plan section 4) is enforced at submit-for-review
+// time instead (src/app/api/items/[id]/reconfirm/route.ts), not here.
 export async function POST(request: Request) {
   try {
     const owner = await requireUser("OWNER");

@@ -8,11 +8,13 @@ const LINKS: Record<string, { href: string; label: string }[]> = {
   SEEKER: [
     { href: "/seeker", label: "Discover" },
     { href: "/seeker/visits", label: "My Visits" },
+    { href: "/seeker/plans", label: "Plans" },
   ],
   OWNER: [
     { href: "/owner", label: "My Listings" },
     { href: "/owner/requests", label: "Requests" },
     { href: "/owner/performance", label: "Performance" },
+    { href: "/owner/plans", label: "Plans" },
   ],
   ADMIN: [{ href: "/admin", label: "Ops Console" }],
 };

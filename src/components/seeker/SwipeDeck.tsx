@@ -19,6 +19,7 @@ export interface FeedItem {
   nextSlot?: { startTime: string } | null;
   slotCount: number;
   coverPhoto?: string | null;
+  featured?: boolean;
 }
 
 const SWIPE_THRESHOLD = 110;
@@ -138,8 +139,15 @@ export default function SwipeDeck({ items, destination }: { items: FeedItem[]; d
             )}
 
             <div className="absolute inset-x-0 top-0 flex items-center justify-between p-3">
-              <span className="rounded-full bg-black/40 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
-                {top.distanceKm.toFixed(1)} km away
+              <span className="flex items-center gap-1.5">
+                <span className="rounded-full bg-black/40 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                  {top.distanceKm.toFixed(1)} km away
+                </span>
+                {top.featured && (
+                  <span className="rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-3 py-1 text-xs font-semibold text-white">
+                    ⚡ Featured
+                  </span>
+                )}
               </span>
               <span className="rounded-full bg-black/40 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-sm">
                 {freshnessAgeLabel(new Date(top.lastConfirmedAt))}

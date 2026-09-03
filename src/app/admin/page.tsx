@@ -7,14 +7,14 @@ import ReportActionButtons from "@/components/admin/ReportActionButtons";
 import AdminItemActions from "@/components/admin/AdminItemActions";
 import AdminVisitActions from "@/components/admin/AdminVisitActions";
 import VerificationActions from "@/components/admin/VerificationActions";
-import { formatDateTime, TYPE_LABEL } from "@/lib/format";
+import { formatDateTime, formatInr, TYPE_LABEL } from "@/lib/format";
 
 export default async function AdminConsolePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?role=ADMIN");
   if (user.role !== "ADMIN") redirect("/");
 
-  const [items, visits, reports, seekerCount, ownerCount] = await Promise.all([
+  const [items, visits, reports, seekerCount, ownerCount, recentOrders] = await Promise.all([
     prisma.inventoryItem.findMany({ include: { property: { include: { owner: true } } } }),
     prisma.visit.findMany({
       include: { seeker: true, inventoryItem: { include: { property: true } } },
@@ -24,7 +24,17 @@ export default async function AdminConsolePage() {
     prisma.trustReport.findMany({ where: { status: "OPEN" }, orderBy: { createdAt: "desc" } }),
     prisma.user.count({ where: { role: "SEEKER" } }),
     prisma.user.count({ where: { role: "OWNER" } }),
+    prisma.order.findMany({ where: { status: "SUCCEEDED" }, include: { user: true }, orderBy: { createdAt: "desc" }, take: 15 }),
   ]);
+
+  // Company-level metric (business plan section 19): net revenue by
+  // engine, not just order count — a mock ledger since there's no real
+  // payment gateway, but real Order rows, not a spreadsheet.
+  const revenueByType = recentOrders.reduce<Record<string, number>>((acc, o) => {
+    acc[o.type] = (acc[o.type] ?? 0) + o.amountInr;
+    return acc;
+  }, {});
+  const totalRevenue = Object.values(revenueByType).reduce((a, b) => a + b, 0);
 
   const stale = items.filter((i) => derivedStatus(i) === "STALE");
   const active = items.filter((i) => derivedStatus(i) === "ACTIVE");
@@ -122,6 +132,38 @@ export default async function AdminConsolePage() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-lg font-semibold text-slate-900">Revenue (mock — last {recentOrders.length} orders)</h2>
+        <p className="mb-2 text-xs text-slate-400">
+          No real payment gateway in this prototype (business plan section 21 says mock, not fake) — every row below is still a real
+          Order created by lib/billing.ts, not a spreadsheet estimate.
+        </p>
+        {recentOrders.length === 0 ? (
+          <p className="text-sm text-slate-400">No orders yet.</p>
+        ) : (
+          <>
+            <div className="mb-2 flex flex-wrap gap-2">
+              {Object.entries(revenueByType).map(([type, amount]) => (
+                <span key={type} className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                  {type.replaceAll("_", " ")}: {formatInr(amount)}
+                </span>
+              ))}
+              <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white">Total: {formatInr(totalRevenue)}</span>
+            </div>
+            <div className="space-y-1.5">
+              {recentOrders.map((order) => (
+                <div key={order.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm">
+                  <span>
+                    {order.type.replaceAll("_", " ")} · {order.user.name} ({order.user.role})
+                  </span>
+                  <span className="font-medium text-slate-800">{formatInr(order.amountInr)}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
       <section>

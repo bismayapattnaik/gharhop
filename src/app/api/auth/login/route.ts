@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSession } from "@/lib/auth";
 import { handleApiError } from "@/lib/api-helpers";
+import { grantWelcomeCreditIfNew } from "@/lib/billing";
 import type { Role } from "@prisma/client";
 
 // Mock OTP: this is a prototype, so any phone number "logs in" without
@@ -25,6 +26,8 @@ export async function POST(request: Request) {
     if (!user) {
       if (!name) return NextResponse.json({ error: "Enter your name." }, { status: 400 });
       user = await prisma.user.create({ data: { phone, name, role } });
+      // GharHop Free's one welcome Rush Credit (business plan section 3).
+      if (role === "SEEKER") await grantWelcomeCreditIfNew(user.id);
     }
 
     await createSession(user.id);

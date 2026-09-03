@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { handleApiError } from "@/lib/api-helpers";
 import { ForbiddenError, NotFoundError, ConflictError } from "@/lib/errors";
+import { ownerEntitlements } from "@/lib/billing";
 import type { ListingStatus } from "@prisma/client";
 
 // GH-O304 "One-tap reconfirm" for an already-ACTIVE listing just bumps the
@@ -26,7 +27,22 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       throw new ConflictError("This unit is marked rented — reopen it first.");
     }
 
-    const nextStatus: ListingStatus = item.status === "DRAFT" || item.status === "REJECTED" ? "PENDING_VERIFICATION" : "ACTIVE";
+    const isSubmission = item.status === "DRAFT" || item.status === "REJECTED";
+    const nextStatus: ListingStatus = isSubmission ? "PENDING_VERIFICATION" : "ACTIVE";
+
+    if (isSubmission) {
+      // Owner plan A/B cap (business plan section 4): List Free is capped
+      // at one active/in-review listing; FastFill raises that to two.
+      const entitlements = await ownerEntitlements(owner.id);
+      const activeCount = await prisma.inventoryItem.count({
+        where: { property: { ownerId: owner.id }, status: { in: ["ACTIVE", "PENDING_VERIFICATION"] } },
+      });
+      if (activeCount >= entitlements.maxActiveListings) {
+        throw new ConflictError(
+          `Your plan allows ${entitlements.maxActiveListings} active listing${entitlements.maxActiveListings === 1 ? "" : "s"} at a time — upgrade to FastFill (₹999/30 days) for more, or pause another listing first.`
+        );
+      }
+    }
 
     const updated = await prisma.inventoryItem.update({
       where: { id },

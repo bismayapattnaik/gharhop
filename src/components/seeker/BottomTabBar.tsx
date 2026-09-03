@@ -29,6 +29,16 @@ const TABS = [
       </svg>
     ),
   },
+  {
+    href: "/seeker/plans",
+    label: "Plans",
+    icon: (active: boolean) => (
+      <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
+        <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" strokeWidth={1.8} fill={active ? "currentColor" : "none"} fillOpacity={active ? 0.15 : 0} />
+        <path d="M3 10h18" stroke="currentColor" strokeWidth={1.8} />
+      </svg>
+    ),
+  },
 ];
 
 export default function BottomTabBar() {
