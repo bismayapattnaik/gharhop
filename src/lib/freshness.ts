@@ -3,10 +3,10 @@ import type { InventoryItem } from "@prisma/client";
 // Derived freshness state (PRD section 8.C — freshness TTL, auto-hide stale
 // units). ACTIVE/STALE is computed at read time from lastConfirmedAt rather
 // than stored, so a missed cron job can never leave a stale unit looking live.
-export type DerivedStatus = "DRAFT" | "ACTIVE" | "STALE" | "PAUSED" | "RENTED";
+export type DerivedStatus = "DRAFT" | "PENDING_VERIFICATION" | "ACTIVE" | "STALE" | "PAUSED" | "RENTED" | "REJECTED";
 
 export function derivedStatus(item: Pick<InventoryItem, "status" | "lastConfirmedAt" | "freshnessTtlHours">): DerivedStatus {
-  if (item.status === "DRAFT" || item.status === "PAUSED" || item.status === "RENTED") {
+  if (item.status !== "ACTIVE") {
     return item.status;
   }
   const ttlMs = item.freshnessTtlHours * 60 * 60 * 1000;

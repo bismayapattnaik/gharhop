@@ -24,6 +24,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     include: {
       property: true,
       slots: { where: { status: "OPEN" }, orderBy: { startTime: "asc" } },
+      rooms: { orderBy: { displayOrder: "asc" }, include: { photos: { orderBy: { displayOrder: "asc" } } } },
     },
   });
   if (!item) notFound();
@@ -34,6 +35,12 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
 
   const status = derivedStatus(item);
   const photos = parsePhotos(item.photos);
+  // Owners who haven't organized a Room Tour yet still get one — fall back
+  // to the flat cover-photo set as a single unlabeled "Photos" room.
+  const tourRooms =
+    item.rooms.length > 0
+      ? item.rooms.map((r) => ({ name: r.name, photos: r.photos.map((p) => p.url) }))
+      : [{ name: "Photos", photos }];
 
   const tags = [
     { icon: "🛋️", label: item.furnishing },
@@ -56,7 +63,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             ←
           </Link>
           <div className="flex items-center gap-2">
-            <Panorama360Trigger images={photos} title={item.property.title} />
+            <Panorama360Trigger rooms={tourRooms} title={item.property.title} />
             <Badge tone="dark" status={status} label={status === "ACTIVE" ? freshnessAgeLabel(item.lastConfirmedAt) : undefined} />
           </div>
         </div>

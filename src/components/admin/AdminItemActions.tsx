@@ -20,6 +20,10 @@ export default function AdminItemActions({ itemId, status }: { itemId: string; s
     router.refresh();
   }
 
+  // Draft/pending-review/rejected listings go through the verification
+  // queue above, not these pause/rent controls.
+  if (!["ACTIVE", "PAUSED", "RENTED"].includes(status)) return null;
+
   return (
     <div className="flex gap-1.5">
       {status !== "PAUSED" && (

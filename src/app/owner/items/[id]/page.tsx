@@ -9,6 +9,7 @@ import NewSlotsForm from "@/components/owner/NewSlotsForm";
 import RespondButtons from "@/components/owner/RespondButtons";
 import BookingModeSelect from "@/components/owner/BookingModeSelect";
 import PhotoManager from "@/components/owner/PhotoManager";
+import RoomManager from "@/components/owner/RoomManager";
 import { formatInr, formatDateTime, TYPE_LABEL } from "@/lib/format";
 import { parsePhotos } from "@/lib/photos";
 
@@ -24,6 +25,7 @@ export default async function ManageItemPage({ params }: { params: Promise<{ id:
       property: true,
       slots: { orderBy: { startTime: "asc" } },
       visits: { include: { seeker: true }, orderBy: { scheduledStart: "asc" } },
+      rooms: { orderBy: { displayOrder: "asc" }, include: { photos: { orderBy: { displayOrder: "asc" } } } },
     },
   });
   if (!item || item.property.ownerId !== user.id) notFound();
@@ -43,24 +45,41 @@ export default async function ManageItemPage({ params }: { params: Promise<{ id:
               {TYPE_LABEL[item.type]} · {item.configuration} · {formatInr(item.rentAmount)}/mo
             </p>
             <p className="mt-1 text-xs text-slate-400">{freshnessAgeLabel(item.lastConfirmedAt)} · TTL {item.freshnessTtlHours}h</p>
+            {item.status === "REJECTED" && item.rejectionReason && (
+              <p className="mt-1 text-sm text-red-600">Admin feedback: {item.rejectionReason}</p>
+            )}
+            {item.status === "PENDING_VERIFICATION" && (
+              <p className="mt-1 text-sm text-purple-600">Awaiting admin review before it goes live.</p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Badge status={status} />
-            <StatusControl itemId={item.id} status={item.status} />
+            {["ACTIVE", "PAUSED", "RENTED"].includes(item.status) && <StatusControl itemId={item.id} status={item.status} />}
           </div>
         </div>
         <div className="mt-3 flex items-center gap-2">
-          <ReconfirmButton itemId={item.id} />
+          {item.status !== "PENDING_VERIFICATION" && item.status !== "RENTED" && (
+            <ReconfirmButton itemId={item.id} status={item.status} />
+          )}
           <BookingModeSelect itemId={item.id} bookingMode={item.bookingMode} />
         </div>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="text-lg font-semibold text-slate-900">Photos &amp; room tour</h2>
-        <p className="mb-3 text-sm text-slate-500">
-          Seekers see these as a swipeable Room Tour with a drag-to-pan preview on the detail page.
-        </p>
+        <h2 className="text-lg font-semibold text-slate-900">Cover photos</h2>
+        <p className="mb-3 text-sm text-slate-500">Shown on the Discover swipe card and the top of the listing page.</p>
         <PhotoManager itemId={item.id} photos={parsePhotos(item.photos)} />
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
+        <h2 className="text-lg font-semibold text-slate-900">Room Tour</h2>
+        <p className="mb-3 text-sm text-slate-500">
+          Organize photos by room — seekers step through them with a drag-to-pan preview on each.
+        </p>
+        <RoomManager
+          itemId={item.id}
+          rooms={item.rooms.map((r) => ({ id: r.id, name: r.name, photos: r.photos.map((p) => ({ id: p.id, url: p.url })) }))}
+        />
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-5">

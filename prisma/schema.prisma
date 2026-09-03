@@ -25,11 +25,16 @@ enum InventoryType {
   PG_BED
 }
 
+// Matches the PRD's own listing lifecycle (section 9): a DRAFT owner submits
+// goes to PENDING_VERIFICATION, an admin approves (-> ACTIVE) or rejects
+// (-> REJECTED, with a reason, editable and resubmittable).
 enum ListingStatus {
   DRAFT
+  PENDING_VERIFICATION
   ACTIVE
   PAUSED
   RENTED
+  REJECTED
 }
 
 enum SlotStatus {
@@ -134,12 +139,36 @@ model InventoryItem {
   // and src/app/api/items/[id]/photos/route.ts. No media provenance/
   // verification pipeline (PRD GH-404 is P1).
   photos            String        @default("[]")
+  rejectionReason   String?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
   slots     AvailabilitySlot[]
   interests Interest[]
   visits    Visit[]
+  rooms     Room[]
+}
+
+// Room-organized photos for the Room Tour ("Living Room", "Bedroom", ...) —
+// distinct from InventoryItem.photos, which is just the swipe-card cover set.
+model Room {
+  id              String        @id @default(cuid())
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  name            String
+  displayOrder    Int           @default(0)
+  createdAt       DateTime      @default(now())
+
+  photos RoomPhoto[]
+}
+
+model RoomPhoto {
+  id           String   @id @default(cuid())
+  roomId       String
+  room         Room     @relation(fields: [roomId], references: [id])
+  url          String
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
 }
 
 model AvailabilitySlot {

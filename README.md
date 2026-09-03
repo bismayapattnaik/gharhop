@@ -64,17 +64,30 @@ Open http://localhost:3000.
   with pause/reactivate/mark-rented, a visit timeline with force-confirm/
   cancel, and trust report intake/action. This is the "minimum admin
   dashboard" — support can unblock a stuck booking without touching the DB.
-- **Real demo photos + owner photo upload + Room Tour** — every listing is
-  auto-assigned a real photo set by inventory type (`src/lib/photos.ts`,
-  images in `public/photos/`, sourced from free-license Unsplash photos)
-  until an owner uploads real ones via `src/app/api/items/[id]/photos/
-  route.ts` (multipart upload to local disk under `public/uploads/<itemId>/`,
-  ownership-checked, type/size validated, replaces the demo set on first
-  upload). Seekers view either set through a "Room Tour" — step through the
-  photos with a drag-to-pan effect on each (`components/Panorama360.tsx`).
-  Honest framing: this is a drag-to-pan photo viewer, not a true
-  equirectangular/spherical or photogrammetry-based 3D reconstruction — that's
-  a genuinely hard ML/capture problem (Matterport-style), not something to fake.
+- **Real demo photos + owner photo upload + room-organized Room Tour** —
+  every listing is auto-assigned a real photo set by inventory type
+  (`src/lib/photos.ts`, images in `public/photos/`, sourced from
+  free-license Unsplash photos) until an owner uploads real ones as the
+  *cover* set (`src/app/api/items/[id]/photos/route.ts`, replaces the demo
+  set on first upload) and/or organizes real photos into named **rooms**
+  ("Living Room", "Bedroom", ...) via `Room`/`RoomPhoto` models and
+  `src/app/api/items/[id]/rooms/**` — a listing with no rooms yet falls back
+  to its flat cover set as a single unlabeled room. Seekers get a "Room
+  Tour": a room-tab bar to switch rooms, prev/next within a room, and
+  drag-to-pan on each photo (`components/Panorama360.tsx`). All uploads are
+  local-disk (`public/uploads/`), ownership-checked, type/size-validated,
+  and cleaned up on delete. Honest framing: this is a drag-to-pan photo
+  viewer, not a true equirectangular/spherical or photogrammetry-based 3D
+  reconstruction — that's a genuinely hard ML/capture problem
+  (Matterport-style), not something to fake.
+- **Admin listing verification** — the PRD's own listing lifecycle
+  (`DRAFT → PENDING_VERIFICATION → ACTIVE`, or `→ REJECTED` with a reason
+  the owner can see and fix before resubmitting). A new/edited listing never
+  reaches seeker search until an admin approves it
+  (`src/app/api/admin/items/[id]/approve|reject`); rejecting requires a
+  reason, both sides get notified. Owner and admin UI updated to only
+  expose actions valid for each state (e.g. no pause/rent controls on a
+  draft still in review).
 - **Real browser geolocation** — a "📍 Use my current location" button calls
   the actual Geolocation API and re-sorts the feed by real distance from the
   device's GPS position (`components/seeker/UseLocationButton.tsx`), falling

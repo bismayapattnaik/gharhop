@@ -6,6 +6,7 @@ import Badge from "@/components/Badge";
 import ReportActionButtons from "@/components/admin/ReportActionButtons";
 import AdminItemActions from "@/components/admin/AdminItemActions";
 import AdminVisitActions from "@/components/admin/AdminVisitActions";
+import VerificationActions from "@/components/admin/VerificationActions";
 import { formatDateTime, TYPE_LABEL } from "@/lib/format";
 
 export default async function AdminConsolePage() {
@@ -27,6 +28,7 @@ export default async function AdminConsolePage() {
 
   const stale = items.filter((i) => derivedStatus(i) === "STALE");
   const active = items.filter((i) => derivedStatus(i) === "ACTIVE");
+  const pendingVerification = items.filter((i) => i.status === "PENDING_VERIFICATION");
   const completedVisits = visits.filter((v) => v.status === "COMPLETED").length;
   const confirmedVisits = visits.filter((v) => ["CONFIRMED", "CHECKED_IN", "COMPLETED"].includes(v.status)).length;
   const severeFraud = reports.filter((r) => r.category === "Fraud").length;
@@ -37,6 +39,7 @@ export default async function AdminConsolePage() {
         <h1 className="text-2xl font-bold text-slate-900">Ops console</h1>
         <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Stat label="Active listings" value={active.length} />
+          <Stat label="Pending review" value={pendingVerification.length} warn={pendingVerification.length > 0} />
           <Stat label="Stale listings" value={stale.length} warn={stale.length > 0} />
           <Stat label="Seekers / Owners" value={`${seekerCount} / ${ownerCount}`} />
           <Stat label="Open trust cases" value={reports.length} warn={reports.length > 0} />
@@ -47,6 +50,25 @@ export default async function AdminConsolePage() {
           {severeFraud > 0 && <span className="text-red-600"> · {severeFraud} fraud report(s) open</span>}.
         </p>
       </div>
+
+      <section>
+        <h2 className="mb-2 text-lg font-semibold text-slate-900">Pending verification</h2>
+        <p className="mb-2 text-xs text-slate-400">New/resubmitted listings — nothing here reaches seeker search until approved (PRD listing lifecycle).</p>
+        {pendingVerification.length === 0 ? (
+          <p className="text-sm text-slate-400">Nothing awaiting review.</p>
+        ) : (
+          <div className="space-y-2">
+            {pendingVerification.map((item) => (
+              <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-sm">
+                <span>
+                  {item.property.title} · {TYPE_LABEL[item.type]} · owner {item.property.owner.name} ({item.property.owner.phone})
+                </span>
+                <VerificationActions itemId={item.id} />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section>
         <h2 className="mb-2 text-lg font-semibold text-slate-900">Freshness / stale queue</h2>

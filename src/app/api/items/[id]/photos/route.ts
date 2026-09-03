@@ -1,20 +1,10 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir, unlink } from "fs/promises";
-import path from "path";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { handleApiError } from "@/lib/api-helpers";
 import { ForbiddenError, NotFoundError } from "@/lib/errors";
 import { parsePhotos } from "@/lib/photos";
-
-const ALLOWED_TYPES: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
-const MAX_SIZE = 5 * 1024 * 1024;
-const MAX_PHOTOS = 8;
-const UPLOADS_ROOT = path.join(process.cwd(), "public", "uploads");
+import { validateImageFile, saveUploadedImage, deleteUploadedFile, MAX_PHOTOS_PER_TARGET } from "@/lib/uploads";
 
 async function verifyOwnership(itemId: string, ownerId: string) {
   const item = await prisma.inventoryItem.findUnique({ where: { id: itemId }, include: { property: true } });
@@ -23,10 +13,9 @@ async function verifyOwnership(itemId: string, ownerId: string) {
   return item;
 }
 
-// Real owner-uploaded photos (no third-party media pipeline — files land on
-// local disk under public/uploads, which is fine for `next dev` but would
-// need real object storage — S3-compatible, per the PRD technical blueprint
-// — before any production deployment).
+// Real owner-uploaded cover photos for the swipe-card/listing-header — see
+// src/app/api/items/[id]/rooms/[roomId]/photos/route.ts for the room-organized
+// Room Tour photos, which are a separate set.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const owner = await requireUser("OWNER");
@@ -45,29 +34,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const isDemoSet = existing.length === 0 || existing.every((p) => p.startsWith("/photos/"));
     const kept = isDemoSet ? [] : existing;
 
-    if (kept.length + files.length > MAX_PHOTOS) {
-      return NextResponse.json({ error: `Max ${MAX_PHOTOS} photos per listing.` }, { status: 400 });
+    if (kept.length + files.length > MAX_PHOTOS_PER_TARGET) {
+      return NextResponse.json({ error: `Max ${MAX_PHOTOS_PER_TARGET} photos per listing.` }, { status: 400 });
     }
-
     for (const file of files) {
-      if (!ALLOWED_TYPES[file.type]) {
-        return NextResponse.json({ error: `Unsupported file type: ${file.type || "unknown"}. Use JPEG, PNG or WebP.` }, { status: 400 });
-      }
-      if (file.size > MAX_SIZE) {
-        return NextResponse.json({ error: "File too large — max 5MB per photo." }, { status: 400 });
-      }
+      const error = validateImageFile(file);
+      if (error) return NextResponse.json({ error }, { status: 400 });
     }
-
-    const dir = path.join(UPLOADS_ROOT, id);
-    await mkdir(dir, { recursive: true });
 
     const newPaths: string[] = [];
     for (const file of files) {
-      const ext = ALLOWED_TYPES[file.type];
-      const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const buffer = Buffer.from(await file.arrayBuffer());
-      await writeFile(path.join(dir, filename), buffer);
-      newPaths.push(`/uploads/${id}/${filename}`);
+      newPaths.push(await saveUploadedImage(file, id));
     }
 
     const photos = [...kept, ...newPaths];
@@ -87,13 +64,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     const url = String(body.url ?? "");
 
     const remaining = parsePhotos(item.photos).filter((p) => p !== url);
-
-    if (url.startsWith("/uploads/")) {
-      const resolved = path.resolve(path.join(process.cwd(), "public", url));
-      if (resolved.startsWith(UPLOADS_ROOT)) {
-        await unlink(resolved).catch(() => {});
-      }
-    }
+    await deleteUploadedFile(url);
 
     const updated = await prisma.inventoryItem.update({ where: { id }, data: { photos: JSON.stringify(remaining) } });
     return NextResponse.json({ item: updated });

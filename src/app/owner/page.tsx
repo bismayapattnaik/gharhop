@@ -64,11 +64,18 @@ export default async function OwnerDashboardPage() {
                       <p className="text-xs text-slate-500">
                         {openSlots} open slot{openSlots === 1 ? "" : "s"} · {freshnessAgeLabel(item.lastConfirmedAt)}
                       </p>
+                      {item.status === "REJECTED" && item.rejectionReason && (
+                        <p className="mt-1 text-xs text-red-600">Rejected: {item.rejectionReason}</p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge status={status} />
-                      <StatusControl itemId={item.id} status={item.status} />
-                      <ReconfirmButton itemId={item.id} />
+                      {["ACTIVE", "PAUSED", "RENTED"].includes(item.status) && (
+                        <StatusControl itemId={item.id} status={item.status} />
+                      )}
+                      {item.status !== "PENDING_VERIFICATION" && item.status !== "RENTED" && (
+                        <ReconfirmButton itemId={item.id} status={item.status} />
+                      )}
                       <Link href={`/owner/items/${item.id}`} className="text-sm text-teal-700 underline">
                         Manage
                       </Link>

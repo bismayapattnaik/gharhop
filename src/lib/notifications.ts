@@ -13,7 +13,9 @@ export type NotificationType =
   | "VISIT_CANCELLED"
   | "VISIT_RESCHEDULE_PROPOSED"
   | "VISIT_RESCHEDULE_ACCEPTED"
-  | "VISIT_RESCHEDULE_DECLINED";
+  | "VISIT_RESCHEDULE_DECLINED"
+  | "LISTING_APPROVED"
+  | "LISTING_REJECTED";
 
 export async function notify(userId: string, type: NotificationType, message: string, link?: string) {
   await prisma.notification.create({ data: { userId, type, message, link } });

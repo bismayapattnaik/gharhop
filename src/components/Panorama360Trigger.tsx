@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import Panorama360 from "@/components/Panorama360";
+import Panorama360, { type TourRoom } from "@/components/Panorama360";
 
-export default function Panorama360Trigger({ images, title }: { images: string[]; title: string }) {
+export default function Panorama360Trigger({ rooms, title }: { rooms: TourRoom[]; title: string }) {
   const [open, setOpen] = useState(false);
-  if (images.length === 0) return null;
+  const hasPhotos = rooms.some((r) => r.photos.length > 0);
+  if (!hasPhotos) return null;
 
   return (
     <>
@@ -15,7 +16,7 @@ export default function Panorama360Trigger({ images, title }: { images: string[]
       >
         <span aria-hidden>🔄</span> Room Tour
       </button>
-      {open && <Panorama360 images={images} title={title} onClose={() => setOpen(false)} />}
+      {open && <Panorama360 rooms={rooms.filter((r) => r.photos.length > 0)} title={title} onClose={() => setOpen(false)} />}
     </>
   );
 }

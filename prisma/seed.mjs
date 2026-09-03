@@ -31,6 +31,8 @@ async function main() {
   await prisma.slotHold.deleteMany();
   await prisma.availabilitySlot.deleteMany();
   await prisma.interest.deleteMany();
+  await prisma.roomPhoto.deleteMany();
+  await prisma.room.deleteMany();
   await prisma.inventoryItem.deleteMany();
   await prisma.property.deleteMany();
   await prisma.user.deleteMany();
@@ -137,6 +139,34 @@ async function main() {
       },
     },
     include: { items: true },
+  });
+
+  // A couple of items get an explicit Room Tour so the room-tab UI has real
+  // data to show; the rest fall back to their flat cover-photo set as a
+  // single unlabeled "Photos" room (see the seeker listing detail page).
+  await prisma.room.create({
+    data: {
+      inventoryItemId: golfCourseFlat.items[0].id,
+      name: "Living Room",
+      displayOrder: 0,
+      photos: { create: [{ url: "/photos/flat-1.jpg", displayOrder: 0 }, { url: "/photos/flat-2.jpg", displayOrder: 1 }] },
+    },
+  });
+  await prisma.room.create({
+    data: {
+      inventoryItemId: golfCourseFlat.items[0].id,
+      name: "Bedroom",
+      displayOrder: 1,
+      photos: { create: [{ url: "/photos/flat-3.jpg", displayOrder: 0 }, { url: "/photos/flat-4.jpg", displayOrder: 1 }] },
+    },
+  });
+  await prisma.room.create({
+    data: {
+      inventoryItemId: cyberCityPg.items[0].id,
+      name: "Room",
+      displayOrder: 0,
+      photos: { create: [{ url: "/photos/pgbed-1.jpg", displayOrder: 0 }, { url: "/photos/pgbed-2.jpg", displayOrder: 1 }] },
+    },
   });
 
   const bookableItems = [cyberCityPg.items[0], golfCourseFlat.items[0], sohnaRoadRoom.items[0]];

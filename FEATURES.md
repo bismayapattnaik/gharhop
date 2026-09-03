@@ -102,14 +102,29 @@ building can have many rooms and many beds, each independently rentable.
 This mirrors how PG operators actually think about their business (a bed is
 the sellable unit, not the building).
 
+A new listing starts as a private draft. When the owner hits "Submit for
+review," it doesn't go live immediately — it enters an **admin verification
+queue** (section 5) first. An admin either approves it (now visible to
+seekers) or rejects it with a reason the owner can see and act on before
+resubmitting. This is the same gate that applies later when an owner just
+wants to *reconfirm* an already-live listing's freshness — that one-tap
+action skips review, since it's not new content, just a freshness ping.
+
 Every new listing starts with realistic stock demo photos so it never looks
 empty. From the listing management screen, an owner can **upload their own
-real photos** (JPEG/PNG/WebP, up to 8, 5MB each) — the first real upload
-replaces the demo set entirely, since there's no reason to keep showing
-stock photos once real ones exist. Seekers view whichever set is live
-through a **Room Tour**: step through the photos with a drag-to-pan effect
-on each, the honest version of "3D tour" this prototype can actually deliver
-(see section 7 for what a true 3D reconstruction would take).
+cover photos** (JPEG/PNG/WebP, up to 8, 5MB each — shown on the swipe card
+and listing header) — the first real upload replaces the demo set entirely,
+since there's no reason to keep showing stock photos once real ones exist.
+
+Separately, an owner can build a **Room Tour**: create named rooms ("Living
+Room", "Bedroom", "Kitchen") and upload photos to each. Seekers browse it
+with a room-tab bar to switch rooms, arrows to step through photos within a
+room, and a drag-to-pan effect on whichever photo is showing — the honest
+version of "3D tour" this prototype can actually deliver (see section 7 for
+what a true 3D reconstruction would take). A listing with no rooms set up
+yet still gets a Room Tour — it just falls back to the flat cover-photo set
+as a single unlabeled room, so nothing looks broken while an owner is
+mid-setup.
 
 ### 4.2 The freshness system — the actual moat
 This is the single most important mechanic in the whole product, and it's
@@ -159,6 +174,10 @@ owner and the company are always looking at the same yardstick.
 
 A single screen for the trust & operations side of the business:
 
+- **Pending verification queue** — every new or resubmitted listing waiting
+  on a human check before it can appear in seeker search. Approve, or
+  reject with a reason that goes straight to the owner. Nothing an owner
+  creates or edits reaches the public marketplace unreviewed.
 - **Stale queue** — every listing currently past its freshness window,
   with the owner's contact info, so ops can chase it down manually if a
   listing matters enough. **Pause or mark-rented right from this screen** —
